@@ -19,6 +19,7 @@
     <modules>
         <module>nucleo-financiero</module>
         <module>nucleo-web</module>
+        <module>svc-identidad</module>
     </modules>
 
     <properties>
