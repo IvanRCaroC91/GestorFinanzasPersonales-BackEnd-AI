@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: svc-identidad
+  threads:
+    virtual:
+      enabled: true
