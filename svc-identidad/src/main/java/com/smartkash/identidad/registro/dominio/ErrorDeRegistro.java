@@ -52,7 +52,13 @@ public class ErrorDeRegistro extends RuntimeException {
         CONTRASENA_IGUAL_AL_CORREO,
 
         /** La contraseña está en la lista de contraseñas comunes. */
-        CONTRASENA_COMUN
+        CONTRASENA_COMUN,
+
+        /** La persona no aceptó la política de tratamiento de datos, que es obligatoria. */
+        POLITICA_NO_ACEPTADA,
+
+        /** La versión de la política que envió la persona falta o no es la vigente. */
+        VERSION_POLITICA_NO_VIGENTE
     }
 
     private final Motivo motivo;
