@@ -19,6 +19,12 @@ spring:
     user: ${IDENTIDAD_BD_MIGRADOR_USUARIO}
     password: ${IDENTIDAD_BD_MIGRADOR_CONTRASENA}
 
+  # Una petición con campos que el servicio no espera (por ejemplo, un rol) se rechaza con un
+  # error en lugar de ignorarlos en silencio.
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+
   jpa:
     # Las tablas las crea solo Flyway. Hibernate únicamente comprueba al arrancar que las
     # clases del código encajan con las tablas; si no encajan, el servicio no arranca.

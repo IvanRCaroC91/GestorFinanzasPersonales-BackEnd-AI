@@ -12,6 +12,9 @@ import com.smartkash.identidad.registro.puertos.RepositorioAutorizaciones;
 import com.smartkash.identidad.registro.puertos.RepositorioPoliticas;
 import com.smartkash.identidad.registro.puertos.RepositorioUsuarios;
 
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.Clock;
 import java.util.Objects;
 
@@ -34,7 +37,11 @@ import java.util.Objects;
  *
  * <p>Errores: {@link ErrorDeRegistro} si un dato de la persona incumple una regla;
  * {@link IllegalStateException} si el sistema no tiene ninguna política publicada.</p>
+ *
+ * <p>{@code @Service} hace que Spring cree este objeto al arrancar y le entregue por el
+ * constructor todo lo que necesita.</p>
  */
+@Service
 public class RegistrarUsuario {
 
     private static final String CAMPO_ACEPTA_POLITICA = "aceptaPolitica";
@@ -80,6 +87,10 @@ public class RegistrarUsuario {
      * <p>No devuelve nada a propósito: así quien llama no tiene forma de saber, ni de
      * contar por descuido, si la cuenta se creó o si el correo ya existía.</p>
      *
+     * <p>{@code @Transactional}: Spring abre una transacción al entrar en el método y la
+     * confirma al salir. Si sale un error, la deshace. Así la cuenta y su prueba de
+     * autorización se guardan las dos o ninguna.</p>
+     *
      * @param datos lo que envió la persona
      * @throws ErrorDeRegistro          si la contraseña o el nombre no cumplen sus reglas,
      *                                  si no se aceptó la política o si la versión enviada
@@ -87,6 +98,7 @@ public class RegistrarUsuario {
      * @throws IllegalArgumentException si el correo está vacío o es demasiado largo
      * @throws IllegalStateException    si no hay ninguna política publicada
      */
+    @Transactional
     public void ejecutar(DatosDeRegistro datos) {
         Objects.requireNonNull(datos, "Los datos de registro son obligatorios.");
 
