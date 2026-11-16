@@ -1,11 +1,15 @@
 package com.smartkash.identidad.registro.adaptadores.web;
 
 import com.smartkash.identidad.registro.dominio.Autorizacion;
+import com.smartkash.identidad.registro.puertos.HasheadorContrasena;
 import com.smartkash.identidad.registro.puertos.RepositorioAutorizaciones;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.MediaType;
@@ -27,7 +31,10 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -67,6 +74,10 @@ class RegistroErroresTest {
     /* El repositorio real, al que una prueba le pide fallar para simular una avería. */
     @MockitoSpyBean
     private RepositorioAutorizaciones autorizaciones;
+
+    /* El calculador de hashes real, vigilado para saber si llegó a usarse. */
+    @MockitoSpyBean
+    private HasheadorContrasena hasheador;
 
     private MockMvc mvc;
 
@@ -214,6 +225,54 @@ class RegistroErroresTest {
                 .andExpect(jsonPath("$.title").value("Error interno"))
                 .andExpect(jsonPath("$.status").value(500));
         assertThat(cuerpoDe(respuesta)).doesNotContain("detalle interno");
+    }
+
+    /**
+     * Un nombre o una contraseña de tamaño desmesurado se rechazan en la puerta, antes de
+     * calcular ningún hash. El hash es caro a propósito (memoria y tiempo), así que no debe
+     * gastarse en solicitudes que de todos modos se van a rechazar.
+     */
+    @Test
+    void valores_desmesurados_se_rechazan_sin_calcular_el_hash() throws Exception {
+        String nombreEnorme = "a".repeat(5_000);
+        String contrasenaEnorme = "b".repeat(5_000);
+
+        esErrorDeValidacion(registrar(
+                cuerpo(nombreEnorme, correoAlAzar(), CONTRASENA_VALIDA, true, "1.0")))
+                .andExpect(jsonPath("$.errores[0].campo").value("nombre"));
+        esErrorDeValidacion(registrar(
+                cuerpo("Ana", correoAlAzar(), contrasenaEnorme, true, "1.0")))
+                .andExpect(jsonPath("$.errores[0].campo").value("contrasena"));
+
+        verify(hasheador, never()).hashear(anyString());
+    }
+
+    /**
+     * Ni la contraseña ni el correo aparecen en el log del servidor, se registre bien la
+     * cuenta, se rechace la solicitud o falle algo por dentro. {@code CapturedOutput} recoge
+     * todo lo que el servicio escribe en la consola durante la prueba.
+     */
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void el_log_no_contiene_contrasenas_ni_correos(CapturedOutput log) throws Exception {
+        String marcaCorreo = "buscame." + UUID.randomUUID();
+        String correo = marcaCorreo + "@correo.com";
+        String contrasenaDebil = "debil-" + UUID.randomUUID().toString().substring(0, 5);
+
+        registrar(cuerpo("Ana", correo, CONTRASENA_VALIDA, true, "1.0"));
+        registrar(cuerpo("Ana", correo, CONTRASENA_VALIDA, true, "1.0"));
+        registrar(cuerpo("Ana", correo, contrasenaDebil, true, "1.0"));
+        registrar(cuerpo("Ana", correo, CONTRASENA_VALIDA, true, "1.0").replace("{", "{\"rol\":\"ADMIN\","));
+        registrar("{\"correo\":\"" + correo + "\",\"contrasena\":\"" + CONTRASENA_VALIDA + "\", ");
+        doThrow(new DataAccessResourceFailureException("avería simulada"))
+                .when(autorizaciones).guardar(any(Autorizacion.class));
+        registrar(cuerpo("Ana", "otra." + correo, CONTRASENA_VALIDA, true, "1.0"));
+
+        assertThat(log.getAll())
+                .contains("Error no controlado")
+                .doesNotContain(CONTRASENA_VALIDA)
+                .doesNotContain(contrasenaDebil)
+                .doesNotContain(marcaCorreo);
     }
 
     /* Comprueba lo que comparten todos los errores de datos de entrada. */

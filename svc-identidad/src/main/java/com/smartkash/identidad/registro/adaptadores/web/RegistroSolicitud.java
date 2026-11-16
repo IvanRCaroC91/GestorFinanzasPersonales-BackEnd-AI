@@ -1,6 +1,8 @@
 package com.smartkash.identidad.registro.adaptadores.web;
 
 import com.smartkash.identidad.registro.aplicacion.DatosDeRegistro;
+import com.smartkash.identidad.registro.dominio.PoliticaContrasena;
+import com.smartkash.identidad.registro.dominio.Usuario;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -21,8 +23,8 @@ import jakarta.validation.constraints.Size;
  * esté presente y, en el correo, que tenga forma de correo. Spring las comprueba antes de
  * llamar al controlador y, si alguna falla, responde con la lista de campos inválidos.</p>
  *
- * <p>Qué no comprueba: las reglas de negocio. El largo del nombre y de la contraseña, la
- * lista de contraseñas comunes y que la política esté aceptada y sea la vigente los decide
+ * <p>Qué no comprueba: las reglas de negocio. El largo exacto del nombre y de la contraseña
+ * (aquí solo hay un tope holgado contra valores desmesurados), la lista de contraseñas comunes y que la política esté aceptada y sea la vigente los decide
  * el caso de uso, con las clases del dominio.</p>
  *
  * <p>Campos protegidos: declara solo los cinco campos que la persona puede decidir. No hay
@@ -38,6 +40,8 @@ import jakarta.validation.constraints.Size;
 record RegistroSolicitud(
 
         @NotBlank(message = "El nombre es obligatorio.")
+        @Size(max = RegistroSolicitud.TOPE_NOMBRE,
+                message = "El nombre no puede tener más de 100 caracteres.")
         String nombre,
 
         @NotBlank(message = "El correo es obligatorio.")
@@ -46,6 +50,8 @@ record RegistroSolicitud(
         String correo,
 
         @NotNull(message = "La contraseña es obligatoria.")
+        @Size(max = RegistroSolicitud.TOPE_CONTRASENA,
+                message = "La contraseña no puede tener más de 64 caracteres.")
         String contrasena,
 
         @NotNull(message = "Debes indicar si aceptas la política de tratamiento de datos.")
@@ -54,6 +60,15 @@ record RegistroSolicitud(
         @NotBlank(message = "La versión de la política es obligatoria.")
         @Size(max = 10, message = "La versión de la política no puede tener más de 10 caracteres.")
         String versionPolitica) {
+
+    /*
+     * Topes de tamaño para frenar valores desmesurados en la puerta, antes de gastar un
+     * cálculo de hash. No sustituyen a los largos exactos del dominio (100 y 64 caracteres
+     * como los ve la persona): aquí se mide en unidades internas de Java, donde un emoji
+     * ocupa dos, así que el tope es el doble para no rechazar nunca un valor válido.
+     */
+    static final int TOPE_NOMBRE = 2 * Usuario.LARGO_MAXIMO_NOMBRE;
+    static final int TOPE_CONTRASENA = 2 * PoliticaContrasena.LARGO_MAXIMO;
 
     /**
      * Copia los datos al objeto que entiende el caso de uso.
