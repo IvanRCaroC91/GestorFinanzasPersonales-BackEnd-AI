@@ -18,3 +18,12 @@ spring:
   flyway:
     user: ${IDENTIDAD_BD_MIGRADOR_USUARIO}
     password: ${IDENTIDAD_BD_MIGRADOR_CONTRASENA}
+
+  jpa:
+    # Las tablas las crea solo Flyway. Hibernate únicamente comprueba al arrancar que las
+    # clases del código encajan con las tablas; si no encajan, el servicio no arranca.
+    hibernate:
+      ddl-auto: validate
+    # La conexión a la base se usa solo mientras dura el caso de uso, no durante toda la
+    # petición web.
+    open-in-view: false

@@ -30,6 +30,13 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Acceso a datos: JPA convierte filas en objetos, Hibernate lo implementa y
+             Spring Data genera las consultas a partir de interfaces. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
         <!-- Migraciones: Flyway aplica los archivos SQL numerados al arrancar el servicio. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
