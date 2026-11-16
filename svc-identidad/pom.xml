@@ -30,6 +30,13 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Validacion de la forma de las solicitudes: campos obligatorios, formato de
+             correo y largos, declarados con anotaciones sobre los campos. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
         <!-- Acceso a datos: JPA convierte filas en objetos, Hibernate lo implementa y
              Spring Data genera las consultas a partir de interfaces. -->
         <dependency>
