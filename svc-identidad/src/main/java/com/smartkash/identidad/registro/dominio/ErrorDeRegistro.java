@@ -30,6 +30,12 @@ public class ErrorDeRegistro extends RuntimeException {
      */
     public enum Motivo {
 
+        /** No se envió nombre, o llegó vacío o hecho solo de espacios. */
+        NOMBRE_OBLIGATORIO,
+
+        /** El nombre tiene más caracteres que el máximo. */
+        NOMBRE_MUY_LARGO,
+
         /** No se envió contraseña, o llegó vacía. */
         CONTRASENA_OBLIGATORIA,
 
