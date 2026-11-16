@@ -54,6 +54,20 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Hash de contrasenas: solo la parte de Spring Security que calcula hashes,
+             sin filtros web ni inicio de sesion. -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+        <!-- Libreria criptografica que implementa Argon2 por dentro. Spring Boot no fija
+             su version, por eso se escribe aqui. -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.87</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
