@@ -1,0 +1,9 @@
+# Saltos de linea fijos (LF) en archivos cuyo contenido exacto importa.
+# Sin esto, Git en Windows puede convertirlos a CRLF al descargar el repositorio.
+
+# Scripts SQL: migraciones y scripts de prueba deben ser iguales en todos los equipos.
+*.sql text eol=lf
+
+# Textos de la politica de tratamiento de datos: la base de datos guarda su huella SHA-256
+# como prueba de lo que acepto cada persona, y un salto de linea distinto cambia la huella.
+svc-identidad/src/main/resources/politicas/*.md text eol=lf
