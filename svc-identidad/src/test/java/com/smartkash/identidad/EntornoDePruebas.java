@@ -2,9 +2,12 @@ package com.smartkash.identidad;
 
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
+import org.springframework.util.StringUtils;
 
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -42,14 +45,21 @@ public class EntornoDePruebas
      */
     @Override
     public void initialize(ConfigurableApplicationContext contexto) {
-        contexto.getEnvironment().getPropertySources().addFirst(new MapPropertySource(
-                "entorno-de-pruebas",
-                Map.of("identidad.token.clave-firma-ruta", archivoDeClave().toString(),
-                        "identidad.token.emisor", EMISOR,
-                        "spring.mail.host", "127.0.0.1",
-                        "spring.mail.port", "9",
-                        "identidad.correo.remitente", REMITENTE,
-                        "identidad.verificacion.direccion-base", "https://app.pruebas.invalid")));
+        ConfigurableEnvironment entorno = contexto.getEnvironment();
+        Map<String, Object> valores = new HashMap<>(Map.of(
+                "identidad.token.clave-firma-ruta", archivoDeClave().toString(),
+                "identidad.token.emisor", EMISOR,
+                "identidad.correo.remitente", REMITENTE,
+                "identidad.verificacion.direccion-base", "https://app.pruebas.invalid"));
+
+        // El servidor de correo solo se fija si la prueba no indicó otro. Así la prueba de
+        // recorrido completo puede apuntar a su propio servidor de correo de pruebas.
+        if (!StringUtils.hasText(entorno.getProperty("spring.mail.host"))) {
+            valores.put("spring.mail.host", "127.0.0.1");
+            valores.put("spring.mail.port", "9");
+        }
+
+        entorno.getPropertySources().addFirst(new MapPropertySource("entorno-de-pruebas", valores));
     }
 
     private static synchronized Path archivoDeClave() {
