@@ -1,6 +1,6 @@
-package com.smartkash.identidad.registro.dominio;
+package com.smartkash.identidad.cuenta.dominio;
 
-import com.smartkash.identidad.registro.dominio.ErrorDeRegistro.Motivo;
+import com.smartkash.identidad.cuenta.dominio.NombreNoValido.Motivo;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -20,7 +20,7 @@ import java.util.UUID;
  * <p>Qué no guarda: la contraseña en claro (solo su hash), ni las fechas de creación y
  * modificación, que las pone la capa de persistencia.</p>
  *
- * <p>Reglas y errores: lanza {@link ErrorDeRegistro} si el nombre falta o es demasiado
+ * <p>Reglas y errores: lanza {@link NombreNoValido} si el nombre falta o es demasiado
  * largo, porque ese es un dato que escribe la persona. Lanza
  * {@link NullPointerException} o {@link IllegalArgumentException} si falta cualquier
  * otro dato o los correos no corresponden, porque eso sería un fallo del programa.</p>
@@ -48,13 +48,10 @@ public record Usuario(
     /** Cantidad máxima de caracteres del nombre. */
     public static final int LARGO_MAXIMO_NOMBRE = 100;
 
-    /** Nombre del campo en el cuerpo de la solicitud; viaja en el error. */
-    private static final String CAMPO_NOMBRE = "nombre";
-
     /**
      * Valida los datos y los deja en su forma definitiva al crear el objeto.
      *
-     * @throws ErrorDeRegistro          si el nombre es nulo, queda vacío o es demasiado largo
+     * @throws NombreNoValido           si el nombre es nulo, queda vacío o es demasiado largo
      * @throws NullPointerException     si falta cualquier otro dato
      * @throws IllegalArgumentException si el hash está vacío o el correo original no
      *                                  corresponde al correo normalizado
@@ -68,13 +65,12 @@ public record Usuario(
         Objects.requireNonNull(estado, "El estado es obligatorio.");
 
         if (nombre == null || nombre.isBlank()) {
-            throw new ErrorDeRegistro(
-                    Motivo.NOMBRE_OBLIGATORIO, CAMPO_NOMBRE, "El nombre es obligatorio.");
+            throw new NombreNoValido(Motivo.OBLIGATORIO, "El nombre es obligatorio.");
         }
         nombre = nombre.strip();
         // Se cuentan caracteres como los ve la persona: un emoji vale uno, no dos.
         if (nombre.codePointCount(0, nombre.length()) > LARGO_MAXIMO_NOMBRE) {
-            throw new ErrorDeRegistro(Motivo.NOMBRE_MUY_LARGO, CAMPO_NOMBRE,
+            throw new NombreNoValido(Motivo.MUY_LARGO,
                     "El nombre no puede tener más de " + LARGO_MAXIMO_NOMBRE + " caracteres.");
         }
 
@@ -108,7 +104,7 @@ public record Usuario(
      * @param correo         el mismo correo ya normalizado
      * @param hashContrasena hash de la contraseña ya calculado
      * @return la cuenta nueva, lista para guardarse
-     * @throws ErrorDeRegistro          si el nombre no es válido
+     * @throws NombreNoValido           si el nombre no es válido
      * @throws NullPointerException     si falta el correo o el hash
      * @throws IllegalArgumentException si el hash está vacío o los correos no corresponden
      */

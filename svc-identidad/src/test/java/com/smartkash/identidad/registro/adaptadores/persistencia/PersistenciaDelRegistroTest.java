@@ -1,12 +1,12 @@
 package com.smartkash.identidad.registro.adaptadores.persistencia;
 
 import com.smartkash.identidad.registro.dominio.Autorizacion;
-import com.smartkash.identidad.registro.dominio.CorreoNormalizado;
-import com.smartkash.identidad.registro.dominio.CorreoYaRegistrado;
-import com.smartkash.identidad.registro.dominio.Usuario;
+import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
+import com.smartkash.identidad.cuenta.dominio.CorreoYaRegistrado;
+import com.smartkash.identidad.cuenta.dominio.Usuario;
 import com.smartkash.identidad.registro.puertos.RepositorioAutorizaciones;
 import com.smartkash.identidad.registro.puertos.RepositorioPoliticas;
-import com.smartkash.identidad.registro.puertos.RepositorioUsuarios;
+import com.smartkash.identidad.cuenta.puertos.RepositorioUsuarios;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

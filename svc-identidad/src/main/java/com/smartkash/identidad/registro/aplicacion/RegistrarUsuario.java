@@ -1,16 +1,17 @@
 package com.smartkash.identidad.registro.aplicacion;
 
 import com.smartkash.identidad.registro.dominio.Autorizacion;
-import com.smartkash.identidad.registro.dominio.CorreoNormalizado;
-import com.smartkash.identidad.registro.dominio.CorreoYaRegistrado;
+import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
+import com.smartkash.identidad.cuenta.dominio.CorreoYaRegistrado;
+import com.smartkash.identidad.cuenta.dominio.NombreNoValido;
 import com.smartkash.identidad.registro.dominio.ErrorDeRegistro;
 import com.smartkash.identidad.registro.dominio.ErrorDeRegistro.Motivo;
 import com.smartkash.identidad.registro.dominio.PoliticaContrasena;
-import com.smartkash.identidad.registro.dominio.Usuario;
-import com.smartkash.identidad.registro.puertos.HasheadorContrasena;
+import com.smartkash.identidad.cuenta.dominio.Usuario;
+import com.smartkash.identidad.cuenta.puertos.HasheadorContrasena;
 import com.smartkash.identidad.registro.puertos.RepositorioAutorizaciones;
 import com.smartkash.identidad.registro.puertos.RepositorioPoliticas;
-import com.smartkash.identidad.registro.puertos.RepositorioUsuarios;
+import com.smartkash.identidad.cuenta.puertos.RepositorioUsuarios;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +45,7 @@ import java.util.Objects;
 @Service
 public class RegistrarUsuario {
 
+    private static final String CAMPO_NOMBRE = "nombre";
     private static final String CAMPO_ACEPTA_POLITICA = "aceptaPolitica";
     private static final String CAMPO_VERSION_POLITICA = "versionPolitica";
 
@@ -110,7 +112,7 @@ public class RegistrarUsuario {
         // correo nuevo y uno repetido pasan por las mismas validaciones y tardan
         // parecido, y ni los errores ni el tiempo de respuesta delatan cuál es cuál.
         String hash = hasheador.hashear(datos.contrasena());
-        Usuario usuario = Usuario.nuevo(datos.nombre(), datos.correo(), correo, hash);
+        Usuario usuario = crearCuenta(datos, correo, hash);
 
         if (usuarios.existeConCorreo(correo)) {
             return;
@@ -127,6 +129,31 @@ public class RegistrarUsuario {
 
         autorizaciones.guardar(
                 Autorizacion.aceptacionDePolitica(usuario.id(), versionVigente, reloj.instant()));
+    }
+
+    /**
+     * Crea la cuenta y, si el nombre no es válido, lo informa con el error del registro.
+     *
+     * <p>Las reglas del nombre viven en {@link Usuario}, que avisa con un error propio de
+     * las cuentas ({@link NombreNoValido}) y no sabe nada del registro. Aquí ese aviso se
+     * traduce a {@link ErrorDeRegistro}, que añade lo que solo el registro conoce: en qué
+     * campo de la solicitud venía el nombre. El mensaje se conserva tal cual.</p>
+     *
+     * @return la cuenta nueva, aún sin guardar
+     * @throws ErrorDeRegistro si el nombre falta o es demasiado largo
+     */
+    private static Usuario crearCuenta(DatosDeRegistro datos, CorreoNormalizado correo, String hash) {
+        try {
+            return Usuario.nuevo(datos.nombre(), datos.correo(), correo, hash);
+        } catch (NombreNoValido nombreNoValido) {
+            // El switch sin "default" obliga a decidir aquí qué hacer si algún día se añade
+            // otra regla del nombre: mientras no se decida, el código no compila.
+            Motivo motivo = switch (nombreNoValido.motivo()) {
+                case OBLIGATORIO -> Motivo.NOMBRE_OBLIGATORIO;
+                case MUY_LARGO -> Motivo.NOMBRE_MUY_LARGO;
+            };
+            throw new ErrorDeRegistro(motivo, CAMPO_NOMBRE, nombreNoValido.getMessage());
+        }
     }
 
     /**

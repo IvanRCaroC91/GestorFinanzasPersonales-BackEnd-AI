@@ -1,4 +1,4 @@
-package com.smartkash.identidad.registro.dominio;
+package com.smartkash.identidad.cuenta.dominio;
 
 /**
  * Rol de autorización de una cuenta: qué tipo de acciones puede hacer en el sistema.

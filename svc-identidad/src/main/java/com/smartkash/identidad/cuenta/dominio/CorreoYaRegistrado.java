@@ -1,4 +1,4 @@
-package com.smartkash.identidad.registro.dominio;
+package com.smartkash.identidad.cuenta.dominio;
 
 /**
  * Aviso de que no se pudo guardar una cuenta porque ya existe otra con el mismo correo.

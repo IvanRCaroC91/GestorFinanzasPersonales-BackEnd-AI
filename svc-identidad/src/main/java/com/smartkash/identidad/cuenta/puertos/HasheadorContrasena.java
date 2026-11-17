@@ -1,4 +1,4 @@
-package com.smartkash.identidad.registro.puertos;
+package com.smartkash.identidad.cuenta.puertos;
 
 /**
  * Convierte una contraseña en un hash apto para guardarse.

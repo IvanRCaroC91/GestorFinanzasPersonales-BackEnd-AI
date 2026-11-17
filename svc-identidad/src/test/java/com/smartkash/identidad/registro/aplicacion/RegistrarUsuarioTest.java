@@ -1,18 +1,18 @@
 package com.smartkash.identidad.registro.aplicacion;
 
 import com.smartkash.identidad.registro.dominio.Autorizacion;
-import com.smartkash.identidad.registro.dominio.CorreoNormalizado;
-import com.smartkash.identidad.registro.dominio.CorreoYaRegistrado;
+import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
+import com.smartkash.identidad.cuenta.dominio.CorreoYaRegistrado;
 import com.smartkash.identidad.registro.dominio.ErrorDeRegistro;
 import com.smartkash.identidad.registro.dominio.ErrorDeRegistro.Motivo;
-import com.smartkash.identidad.registro.dominio.EstadoCuenta;
+import com.smartkash.identidad.cuenta.dominio.EstadoCuenta;
 import com.smartkash.identidad.registro.dominio.PoliticaContrasena;
-import com.smartkash.identidad.registro.dominio.Rol;
-import com.smartkash.identidad.registro.dominio.Usuario;
-import com.smartkash.identidad.registro.puertos.HasheadorContrasena;
+import com.smartkash.identidad.cuenta.dominio.Rol;
+import com.smartkash.identidad.cuenta.dominio.Usuario;
+import com.smartkash.identidad.cuenta.puertos.HasheadorContrasena;
 import com.smartkash.identidad.registro.puertos.RepositorioAutorizaciones;
 import com.smartkash.identidad.registro.puertos.RepositorioPoliticas;
-import com.smartkash.identidad.registro.puertos.RepositorioUsuarios;
+import com.smartkash.identidad.cuenta.puertos.RepositorioUsuarios;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -236,6 +236,33 @@ class RegistrarUsuarioTest {
         assertEquals(conCorreoNuevo.motivo(), conCorreoExistente.motivo());
     }
 
+    // ---------- Nombre ----------
+
+    @Test
+    @DisplayName("un nombre vacío se rechaza con el error del registro, su motivo y su campo")
+    void rechazaNombreVacioConElErrorDelRegistro() {
+        ErrorDeRegistro error = assertThrows(ErrorDeRegistro.class,
+                () -> registrarUsuario.ejecutar(datos("   ", "ana@correo.com", CONTRASENA_VALIDA)));
+
+        assertEquals(Motivo.NOMBRE_OBLIGATORIO, error.motivo());
+        assertEquals("nombre", error.campo());
+        assertEquals("El nombre es obligatorio.", error.getMessage());
+        assertEquals(0, usuarios.guardados.size());
+    }
+
+    @Test
+    @DisplayName("un nombre de 101 caracteres se rechaza con el error del registro, su motivo y su campo")
+    void rechazaNombreMuyLargoConElErrorDelRegistro() {
+        ErrorDeRegistro error = assertThrows(ErrorDeRegistro.class,
+                () -> registrarUsuario.ejecutar(
+                        datos("a".repeat(101), "ana@correo.com", CONTRASENA_VALIDA)));
+
+        assertEquals(Motivo.NOMBRE_MUY_LARGO, error.motivo());
+        assertEquals("nombre", error.campo());
+        assertEquals("El nombre no puede tener más de 100 caracteres.", error.getMessage());
+        assertEquals(0, usuarios.guardados.size());
+    }
+
     // ---------- Datos de entrada ----------
 
     @Test
@@ -271,6 +298,11 @@ class RegistrarUsuarioTest {
         @Override
         public boolean existeConCorreo(CorreoNormalizado correo) {
             return !consultaDiceQueNoExiste && yaGuardado(correo);
+        }
+
+        @Override
+        public Optional<Usuario> buscarPorCorreo(CorreoNormalizado correo) {
+            return guardados.stream().filter(usuario -> usuario.correo().equals(correo)).findFirst();
         }
 
         @Override

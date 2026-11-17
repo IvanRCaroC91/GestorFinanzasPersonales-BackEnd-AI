@@ -1,4 +1,4 @@
-package com.smartkash.identidad.registro.adaptadores.persistencia;
+package com.smartkash.identidad.cuenta.adaptadores.persistencia;
 
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -6,6 +6,7 @@ import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -25,6 +26,16 @@ interface UsuariosJpa extends Repository<UsuarioEntidad, UUID> {
      * @return {@code true} si existe una fila con ese correo
      */
     boolean existsByEmailNormalizado(String emailNormalizado);
+
+    /**
+     * Busca la fila de la cuenta con ese correo. Spring deduce la consulta del nombre del
+     * método: "encuentra por correo normalizado". Como el correo normalizado es único en la
+     * tabla, nunca hay más de una fila.
+     *
+     * @param emailNormalizado el correo en minúsculas y sin espacios
+     * @return la fila, o una caja vacía si no existe
+     */
+    Optional<UsuarioEntidad> findByEmailNormalizado(String emailNormalizado);
 
     /**
      * Inserta una cuenta solo si su correo no está ya registrado.

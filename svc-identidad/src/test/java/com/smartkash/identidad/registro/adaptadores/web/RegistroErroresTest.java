@@ -1,7 +1,7 @@
 package com.smartkash.identidad.registro.adaptadores.web;
 
 import com.smartkash.identidad.registro.dominio.Autorizacion;
-import com.smartkash.identidad.registro.puertos.HasheadorContrasena;
+import com.smartkash.identidad.cuenta.puertos.HasheadorContrasena;
 import com.smartkash.identidad.registro.puertos.RepositorioAutorizaciones;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -144,6 +144,27 @@ class RegistroErroresTest {
         esErrorDeValidacion(respuesta)
                 .andExpect(jsonPath("$.codigo").value("VERSION_POLITICA_NO_VIGENTE"))
                 .andExpect(jsonPath("$.errores[0].campo").value("versionPolitica"));
+    }
+
+    /**
+     * Un nombre de 101 caracteres supera el máximo de 100. Pasa el tope holgado de la puerta
+     * (que solo frena tamaños desmesurados), así que quien lo rechaza es la regla del nombre.
+     * La respuesta señala el campo, explica el límite y lleva su motivo; no se crea la cuenta.
+     */
+    @Test
+    void nombre_demasiado_largo_responde_400_con_su_motivo() throws Exception {
+        String correo = correoAlAzar();
+
+        ResultActions respuesta =
+                registrar(cuerpo("a".repeat(101), correo, CONTRASENA_VALIDA, true, "1.0"));
+
+        esErrorDeValidacion(respuesta)
+                .andExpect(jsonPath("$.codigo").value("NOMBRE_MUY_LARGO"))
+                .andExpect(jsonPath("$.errores", hasSize(1)))
+                .andExpect(jsonPath("$.errores[0].campo").value("nombre"))
+                .andExpect(jsonPath("$.errores[0].mensaje")
+                        .value("El nombre no puede tener más de 100 caracteres."));
+        assertThat(cuentasCon(correo)).isZero();
     }
 
     /** Si faltan campos obligatorios, la respuesta los lista todos de una vez. */

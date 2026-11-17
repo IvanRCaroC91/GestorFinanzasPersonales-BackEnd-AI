@@ -1,5 +1,6 @@
 package com.smartkash.identidad.registro.dominio;
 
+import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
 import com.smartkash.identidad.registro.dominio.ErrorDeRegistro.Motivo;
 import com.smartkash.identidad.registro.puertos.ContrasenasComunes;
 
