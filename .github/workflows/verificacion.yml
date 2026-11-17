@@ -1,0 +1,59 @@
+# Verificacion automatica del backend.
+#
+# Compila todos los modulos y ejecuta todas las pruebas con el mismo comando que se usa
+# en local (./mvnw verify). Asi, ningun cambio llega a la rama principal sin haber pasado
+# las pruebas en una maquina limpia, distinta del equipo de quien lo escribio.
+name: Verificacion
+
+on:
+  # Cada pull request que quiera entrar a main.
+  pull_request:
+    branches: [main]
+  # Cada cambio que ya entro a main (por ejemplo, al fusionar un pull request).
+  push:
+    branches: [main]
+
+# Permisos minimos: el flujo solo necesita leer el codigo del repositorio.
+# No puede escribir en el, ni publicar paquetes, ni comentar, ni tocar nada mas.
+permissions:
+  contents: read
+
+# Si se suben nuevos cambios a la misma rama mientras una verificacion sigue corriendo,
+# se cancela la anterior: su resultado ya no interesa. En main no se cancela nada,
+# para que cada cambio fusionado quede con su propio resultado.
+concurrency:
+  group: verificacion-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verificar:
+    name: Compilar y probar
+    # Version fija del sistema en lugar de "ubuntu-latest", para que el entorno no cambie
+    # por sorpresa. Esta imagen ya trae Docker instalado y en marcha, que es lo que
+    # necesita Testcontainers para levantar PostgreSQL durante las pruebas de integracion.
+    runs-on: ubuntu-24.04
+    # Tope de tiempo: si algo se queda colgado, el trabajo se corta en vez de gastar minutos.
+    timeout-minutes: 20
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v7
+        with:
+          # No deja guardada en disco la credencial temporal del repositorio:
+          # los pasos siguientes no la necesitan.
+          persist-credentials: false
+
+      - name: Instalar JDK 25
+        uses: actions/setup-java@v6
+        with:
+          # Temurin es la distribucion gratuita de OpenJDK que publica Eclipse Adoptium.
+          distribution: temurin
+          java-version: '25'
+          # Guarda entre ejecuciones las dependencias descargadas (~/.m2/repository).
+          # La cache se renueva sola cuando cambia algun pom.xml.
+          cache: maven
+
+      - name: Compilar y ejecutar todas las pruebas
+        # --batch-mode: Maven no hace preguntas ni usa colores, pensado para automatizacion.
+        # --no-transfer-progress: no llena el registro con el avance de cada descarga.
+        run: ./mvnw --batch-mode --no-transfer-progress verify
