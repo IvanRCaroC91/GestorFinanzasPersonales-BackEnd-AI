@@ -9,6 +9,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -88,5 +90,38 @@ class MigracionesTest {
         assertThat(puedeInsertar).isTrue();
         assertThat(puedeModificar).isFalse();
         assertThat(puedeBorrar).isFalse();
+    }
+
+    /**
+     * El historial de migraciones es la tabla donde Flyway anota qué archivos ya aplicó. El
+     * rol con el que se conecta la aplicación no debe poder leerla ni cambiarla: solo la
+     * usa quien aplica las migraciones. Si la aplicación pudiera alterarla, un fallo o un
+     * ataque en el servicio podría hacer que una migración se repita o se dé por aplicada
+     * sin estarlo.
+     */
+    @Test
+    void la_aplicacion_no_tiene_permisos_sobre_el_historial_de_migraciones() {
+        for (String permiso : List.of("SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE")) {
+            Boolean loTiene = jdbc.queryForObject(
+                    "SELECT has_table_privilege('identidad_app', 'flyway_schema_history', ?)",
+                    Boolean.class, permiso);
+
+            assertThat(loTiene).as("permiso %s sobre el historial de migraciones", permiso).isFalse();
+        }
+    }
+
+    /**
+     * Retirar los permisos sobre el historial no debe afectar a las tablas con las que
+     * trabaja la aplicación: sigue pudiendo leer y escribir cuentas.
+     */
+    @Test
+    void la_aplicacion_conserva_sus_permisos_sobre_las_tablas_de_datos() {
+        Boolean puedeLeer = jdbc.queryForObject(
+                "SELECT has_table_privilege('identidad_app', 'usuarios', 'SELECT')", Boolean.class);
+        Boolean puedeInsertar = jdbc.queryForObject(
+                "SELECT has_table_privilege('identidad_app', 'usuarios', 'INSERT')", Boolean.class);
+
+        assertThat(puedeLeer).isTrue();
+        assertThat(puedeInsertar).isTrue();
     }
 }
