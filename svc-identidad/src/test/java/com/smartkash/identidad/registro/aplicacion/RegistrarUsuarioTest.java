@@ -350,5 +350,10 @@ class RegistrarUsuarioTest {
             recibidas.add(contrasena);
             return "hash-falso-" + recibidas.size();
         }
+
+        @Override
+        public boolean coincide(String contrasena, String hash) {
+            throw new UnsupportedOperationException("El registro no compara contraseñas.");
+        }
     }
 }

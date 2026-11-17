@@ -16,7 +16,8 @@ import org.springframework.stereotype.Component;
  * de contraseñas hasta acertar.</p>
  *
  * <p>De dónde vienen los datos: la contraseña llega del caso de uso del registro, ya
- * validada. A dónde van: el hash resultante se guarda en la tabla de usuarios. El hash lleva
+ * validada, o del inicio de sesión, para compararla. A dónde van: el hash resultante se
+ * guarda en la tabla de usuarios. El hash lleva
  * escritos sus propios parámetros y su sal (un dato al azar distinto en cada cálculo), así
  * que para verificarlo después no hace falta guardar nada más.</p>
  *
@@ -56,5 +57,21 @@ class HasheadorArgon2 implements HasheadorContrasena {
     @Override
     public String hashear(String contrasena) {
         return argon2.encode(contrasena);
+    }
+
+    /**
+     * Dice si una contraseña corresponde a un hash Argon2 guardado.
+     *
+     * <p>Lee del propio hash los parámetros y la sal con que se calculó, repite el cálculo y
+     * compara el resultado en tiempo constante (sin cortar en el primer carácter distinto,
+     * para que el tiempo no dé pistas). Un hash con forma no válida no coincide nunca.</p>
+     *
+     * @param contrasena la contraseña en claro que escribió la persona
+     * @param hash       el hash guardado
+     * @return {@code true} si la contraseña corresponde al hash
+     */
+    @Override
+    public boolean coincide(String contrasena, String hash) {
+        return argon2.matches(contrasena, hash);
     }
 }

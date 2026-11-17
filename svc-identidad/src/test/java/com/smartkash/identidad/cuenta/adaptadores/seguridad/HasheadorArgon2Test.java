@@ -65,6 +65,35 @@ class HasheadorArgon2Test {
         assertThat(verificador.matches("otra frase larga y dificil", hash)).isFalse();
     }
 
+    /** Comparar la contraseña correcta con su propio hash da coincidencia. */
+    @Test
+    void la_contrasena_correcta_coincide_con_su_hash() {
+        String hash = hasheador.hashear(CONTRASENA);
+
+        assertThat(hasheador.coincide(CONTRASENA, hash)).isTrue();
+    }
+
+    /** Una contraseña distinta, aunque se parezca, no coincide. */
+    @Test
+    void una_contrasena_distinta_no_coincide() {
+        String hash = hasheador.hashear(CONTRASENA);
+
+        assertThat(hasheador.coincide(CONTRASENA + " ", hash)).isFalse();
+        assertThat(hasheador.coincide("otra frase larga y dificil", hash)).isFalse();
+    }
+
+    /**
+     * El hash de relleno (el de un valor aleatorio que nadie conoce) no coincide con una
+     * contraseña cualquiera, y compararlo cuesta el mismo cálculo que con un hash real.
+     */
+    @Test
+    void el_hash_de_relleno_no_coincide_con_una_contrasena_cualquiera() {
+        String hashDeRelleno = hasheador.hashear("valor-inventado-que-hace-de-relleno");
+
+        assertThat(hashDeRelleno).startsWith("$argon2id$v=19$m=19456,t=2,p=1$");
+        assertThat(hasheador.coincide(CONTRASENA, hashDeRelleno)).isFalse();
+    }
+
     /**
      * La contraseña se usa tal como llega: si lleva espacios en los extremos, esos espacios
      * forman parte de ella.
