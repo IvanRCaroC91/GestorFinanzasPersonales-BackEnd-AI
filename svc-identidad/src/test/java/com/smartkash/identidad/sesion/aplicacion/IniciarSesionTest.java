@@ -12,6 +12,7 @@ import com.smartkash.identidad.sesion.dominio.DemasiadosIntentos;
 import com.smartkash.identidad.sesion.dominio.TipoDeContador;
 import com.smartkash.identidad.sesion.dominio.TokenAcceso;
 import com.smartkash.identidad.sesion.dominio.TokenRenovacion;
+import com.smartkash.identidad.sesion.puertos.ConsultaDePoliticas;
 import com.smartkash.identidad.sesion.puertos.EmisorTokenAcceso;
 import com.smartkash.identidad.sesion.puertos.RepositorioBloqueos;
 import com.smartkash.identidad.sesion.puertos.RepositorioTokensRenovacion;
@@ -86,9 +87,10 @@ class IniciarSesionTest {
     private final HasheadorFalso hasheador = new HasheadorFalso(llamadas);
     private final GeneradorFalso generador = new GeneradorFalso();
     private final HuellasFalsas huellas = new HuellasFalsas(llamadas);
+    private final PoliticasFalsas politicas = new PoliticasFalsas(llamadas);
 
     private final IniciarSesion iniciarSesion = new IniciarSesion(
-            usuarios, bloqueos, renovaciones, emisor, hasheador, generador, huellas, reloj);
+            usuarios, bloqueos, renovaciones, emisor, hasheador, generador, huellas, politicas, reloj);
 
     private final Usuario ana = cuentaCon(EstadoCuenta.ACTIVA);
 
@@ -172,6 +174,33 @@ class IniciarSesionTest {
         }
 
         assertThat(iniciarSesion.ejecutar(CORREO, CONTRASENA, IP).usuario()).isEqualTo(ana);
+    }
+
+    // ---------- Política de tratamiento pendiente ----------
+
+    @Test
+    @DisplayName("si hay una política nueva sin aceptar, la sesión se inicia igual y lo indica")
+    void conPoliticaPendienteLoIndica() {
+        politicas.pendiente = true;
+
+        SesionIniciada sesion = iniciarSesion.ejecutar(CORREO, CONTRASENA, IP);
+
+        assertThat(sesion.requiereAceptarPolitica()).isTrue();
+        assertThat(politicas.consultas).containsExactly(new ConsultaDePolitica(ana.id(), AHORA));
+    }
+
+    @Test
+    @DisplayName("sin política pendiente, la sesión no pide aceptar nada")
+    void sinPoliticaPendienteNoPideNada() {
+        assertThat(iniciarSesion.ejecutar(CORREO, CONTRASENA, IP).requiereAceptarPolitica()).isFalse();
+    }
+
+    @Test
+    @DisplayName("si las credenciales fallan, no se consultan las políticas")
+    void siFallaNoSeConsultanLasPoliticas() {
+        fallar(CORREO, IP);
+
+        assertThat(politicas.consultas).isEmpty();
     }
 
     // ---------- Contraseña errónea ----------
@@ -646,6 +675,29 @@ class IniciarSesionTest {
             generados++;
             ultimo = "valor-aleatorio-" + generados;
             return ultimo;
+        }
+    }
+
+    /** Una consulta de políticas: de qué cuenta y a qué hora. */
+    private record ConsultaDePolitica(UUID usuarioId, Instant ahora) {
+    }
+
+    /** Consulta de políticas cuya respuesta fija la prueba; apunta cada consulta. */
+    private static final class PoliticasFalsas implements ConsultaDePoliticas {
+
+        private final List<String> llamadas;
+        final List<ConsultaDePolitica> consultas = new ArrayList<>();
+        boolean pendiente;
+
+        PoliticasFalsas(List<String> llamadas) {
+            this.llamadas = llamadas;
+        }
+
+        @Override
+        public boolean hayPoliticaPendiente(UUID usuarioId, Instant ahora) {
+            llamadas.add("consultarPoliticas");
+            consultas.add(new ConsultaDePolitica(usuarioId, ahora));
+            return pendiente;
         }
     }
 

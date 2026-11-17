@@ -20,12 +20,16 @@ import java.util.Objects;
  * @param tokenAcceso        el token de acceso firmado y su caducidad
  * @param tokenRenovacion    el valor en claro del token de renovación, para la cookie
  * @param renovacionExpiraEn cuándo caduca el token de renovación
+ * @param requiereAceptarPolitica {@code true} si se publicó una política de tratamiento que
+ *                           cambia la finalidad y la persona aún no la aceptó; la sesión se
+ *                           inicia igual y el frontend le pide aceptarla
  * @param usuario            la cuenta que inició sesión
  */
 public record SesionIniciada(
         TokenAcceso tokenAcceso,
         String tokenRenovacion,
         Instant renovacionExpiraEn,
+        boolean requiereAceptarPolitica,
         Usuario usuario) {
 
     /**
@@ -51,6 +55,7 @@ public record SesionIniciada(
     @Override
     public String toString() {
         return "SesionIniciada[tokenAcceso=" + tokenAcceso + ", renovacionExpiraEn="
-                + renovacionExpiraEn + ", usuario=" + usuario + "]";
+                + renovacionExpiraEn + ", requiereAceptarPolitica=" + requiereAceptarPolitica
+                + ", usuario=" + usuario + "]";
     }
 }

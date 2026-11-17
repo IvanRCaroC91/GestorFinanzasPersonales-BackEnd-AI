@@ -75,7 +75,8 @@ class RepositorioUsuariosPostgres implements RepositorioUsuarios {
                 new CorreoNormalizado(fila.emailNormalizado()),
                 fila.hashContrasena(),
                 Rol.valueOf(fila.rol()),
-                EstadoCuenta.valueOf(fila.estado()));
+                EstadoCuenta.valueOf(fila.estado()),
+                fila.eliminacionProgramadaEn());
     }
 
     /**

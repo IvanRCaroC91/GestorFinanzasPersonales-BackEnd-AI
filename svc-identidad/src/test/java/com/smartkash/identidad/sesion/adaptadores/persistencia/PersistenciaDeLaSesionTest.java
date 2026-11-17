@@ -6,6 +6,7 @@ import com.smartkash.identidad.cuenta.puertos.RepositorioUsuarios;
 import com.smartkash.identidad.sesion.dominio.ControlDeIntentos;
 import com.smartkash.identidad.sesion.dominio.TipoDeContador;
 import com.smartkash.identidad.sesion.dominio.TokenRenovacion;
+import com.smartkash.identidad.sesion.puertos.ConsultaDePoliticas;
 import com.smartkash.identidad.sesion.puertos.RepositorioBloqueos;
 import com.smartkash.identidad.sesion.puertos.RepositorioTokensRenovacion;
 import org.junit.jupiter.api.Test;
@@ -78,6 +79,9 @@ class PersistenciaDeLaSesionTest {
 
     @Autowired
     private RepositorioUsuarios usuarios;
+
+    @Autowired
+    private ConsultaDePoliticas politicas;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -236,7 +240,60 @@ class PersistenciaDeLaSesionTest {
                 .isEqualTo(2);
     }
 
+    // ---------- Políticas de tratamiento pendientes ----------
+
+    /**
+     * Recorrido completo de la regla, paso a paso, porque las políticas publicadas son comunes a
+     * todas las cuentas y cada paso depende de lo publicado en el anterior.
+     *
+     * <p>La regla: una cuenta tiene una política pendiente si se publicó una versión que cambia
+     * la finalidad y la cuenta no ha aceptado ni esa versión ni otra publicada después. Una
+     * política con fecha futura todavía no cuenta.</p>
+     */
+    @Test
+    void decide_si_hay_una_politica_pendiente() {
+        Usuario ana = cuentaGuardada();
+        Usuario luis = cuentaGuardada();
+        aceptar(ana, "1.0", true);
+        aceptar(luis, "1.0", true);
+
+        // Solo existe la política inicial, que no cambia la finalidad.
+        assertThat(politicas.hayPoliticaPendiente(ana.id(), AHORA)).isFalse();
+
+        // Se publica una versión que cambia la finalidad: las dos cuentas deben aceptarla.
+        publicar("2.0", AHORA.minus(Duration.ofHours(1)), true);
+        assertThat(politicas.hayPoliticaPendiente(ana.id(), AHORA)).isTrue();
+        assertThat(politicas.hayPoliticaPendiente(luis.id(), AHORA)).isTrue();
+
+        // Ana acepta una versión posterior, aunque esa no cambie la finalidad: ya no tiene nada
+        // pendiente. Luis rechaza la 2.0: rechazar no es aceptar, sigue pendiente.
+        publicar("3.0", AHORA.minus(Duration.ofMinutes(30)), false);
+        aceptar(ana, "3.0", true);
+        aceptar(luis, "2.0", false);
+        assertThat(politicas.hayPoliticaPendiente(ana.id(), AHORA)).isFalse();
+        assertThat(politicas.hayPoliticaPendiente(luis.id(), AHORA)).isTrue();
+
+        // Una versión con fecha de publicación futura no cuenta hasta que llegue esa fecha.
+        publicar("4.0", AHORA.plus(Duration.ofDays(1)), true);
+        assertThat(politicas.hayPoliticaPendiente(ana.id(), AHORA)).isFalse();
+        assertThat(politicas.hayPoliticaPendiente(ana.id(), AHORA.plus(Duration.ofDays(2)))).isTrue();
+    }
+
     // ---------- Ayudas ----------
+
+    private void publicar(String version, Instant publicadaEn, boolean cambiaFinalidad) {
+        jdbc.update("INSERT INTO politicas_tratamiento (version, publicada_en, url, hash_texto, cambia_finalidad) "
+                        + "VALUES (?, ?, ?, ?, ?)",
+                version, Timestamp.from(publicadaEn), "/legal/politica-de-tratamiento/" + version,
+                claveAlAzar(), cambiaFinalidad);
+    }
+
+    private void aceptar(Usuario cuenta, String version, boolean otorgada) {
+        jdbc.update("INSERT INTO autorizaciones (id, usuario_id, tipo, politica_version, otorgada, registrada_en) "
+                        + "VALUES (?, ?, 'POLITICA_TRATAMIENTO', ?, ?, ?)",
+                UUID.randomUUID(), cuenta.id(), version, otorgada, Timestamp.from(AHORA));
+    }
+
 
     /*
      * Lanza HILOS tareas que esperan en una "puerta de salida" (CountDownLatch) y, cuando se

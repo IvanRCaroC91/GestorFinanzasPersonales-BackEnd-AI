@@ -9,6 +9,7 @@ import com.smartkash.identidad.sesion.dominio.DemasiadosIntentos;
 import com.smartkash.identidad.sesion.dominio.TipoDeContador;
 import com.smartkash.identidad.sesion.dominio.TokenAcceso;
 import com.smartkash.identidad.sesion.dominio.TokenRenovacion;
+import com.smartkash.identidad.sesion.puertos.ConsultaDePoliticas;
 import com.smartkash.identidad.sesion.puertos.EmisorTokenAcceso;
 import com.smartkash.identidad.sesion.puertos.RepositorioBloqueos;
 import com.smartkash.identidad.sesion.puertos.RepositorioTokensRenovacion;
@@ -88,6 +89,7 @@ public class IniciarSesion {
     private final HasheadorContrasena hasheador;
     private final GeneradorTokens generador;
     private final CalculadorHuellas huellas;
+    private final ConsultaDePoliticas politicas;
     private final Clock reloj;
 
     /** Hash de un valor aleatorio que nadie conoce; ver la explicación de la clase. */
@@ -107,6 +109,7 @@ public class IniciarSesion {
      * @param hasheador         quién compara la contraseña con su hash
      * @param generador         quién produce los valores aleatorios
      * @param huellas           quién calcula las huellas de las claves y de los tokens
+     * @param politicas         quién dice si la cuenta tiene una política pendiente de aceptar
      * @param reloj             de dónde se toma la hora; en las pruebas, un reloj controlado
      * @throws NullPointerException si falta alguno
      */
@@ -118,6 +121,7 @@ public class IniciarSesion {
             HasheadorContrasena hasheador,
             GeneradorTokens generador,
             CalculadorHuellas huellas,
+            ConsultaDePoliticas politicas,
             Clock reloj) {
         this.usuarios = Objects.requireNonNull(usuarios);
         this.bloqueos = Objects.requireNonNull(bloqueos);
@@ -126,6 +130,7 @@ public class IniciarSesion {
         this.hasheador = Objects.requireNonNull(hasheador);
         this.generador = Objects.requireNonNull(generador);
         this.huellas = Objects.requireNonNull(huellas);
+        this.politicas = Objects.requireNonNull(politicas);
         this.reloj = Objects.requireNonNull(reloj);
         this.hashDeRelleno = hasheador.hashear(generador.generar());
     }
@@ -219,6 +224,11 @@ public class IniciarSesion {
                 usuario.id(), huellas.huellaDe(valorRenovacion), ahora);
         tokensRenovacion.guardar(renovacion);
 
-        return new SesionIniciada(tokenAcceso, valorRenovacion, renovacion.expiraEn(), usuario);
+        // Solo se pregunta cuando la persona ya entró: así un fallo hace exactamente las mismas
+        // llamadas sea cual sea su motivo.
+        boolean requiereAceptarPolitica = politicas.hayPoliticaPendiente(usuario.id(), ahora);
+
+        return new SesionIniciada(tokenAcceso, valorRenovacion, renovacion.expiraEn(),
+                requiereAceptarPolitica, usuario);
     }
 }
