@@ -3,6 +3,7 @@ package com.smartkash.identidad.verificacion.puertos;
 import com.smartkash.identidad.verificacion.dominio.TokenVerificacion;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -48,16 +49,16 @@ public interface RepositorioTokensDeUnUso {
     boolean marcarComoUsado(TokenVerificacion usado);
 
     /**
-     * Cuenta los tokens emitidos a una cuenta desde un momento dado.
+     * Devuelve cuándo se emitió cada token de una cuenta desde un momento dado.
      *
-     * <p>Sirve para aplicar el tope de envíos por hora. Cuenta todos los emitidos, se hayan
-     * usado, invalidado o no.</p>
+     * <p>Sirve para aplicar el tope de envíos por hora: cuántos hay y cuándo saldrá de la
+     * ventana el más antiguo. Incluye todos los emitidos, se hayan usado, invalidado o no.</p>
      *
      * @param usuarioId la cuenta
-     * @param desde     momento desde el que se cuenta
-     * @return cuántos se emitieron
+     * @param desde     momento desde el que se cuenta, incluido
+     * @return las fechas de emisión, de la más antigua a la más reciente
      */
-    int contarEmitidosDesde(UUID usuarioId, Instant desde);
+    List<Instant> emitidosDesde(UUID usuarioId, Instant desde);
 
     /**
      * Hace que dejen de valer los tokens de una cuenta que siguen sin usar.

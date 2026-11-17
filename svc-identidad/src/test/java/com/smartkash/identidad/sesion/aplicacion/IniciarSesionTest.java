@@ -549,6 +549,11 @@ class IniciarSesionTest {
         public void marcarVerificada(UUID usuarioId, Instant ahora) {
             throw new UnsupportedOperationException("El inicio de sesión no lo usa.");
         }
+
+        @Override
+        public Optional<Usuario> buscarPorId(UUID usuarioId) {
+            throw new UnsupportedOperationException("El inicio de sesión no lo usa.");
+        }
     }
 
     /**

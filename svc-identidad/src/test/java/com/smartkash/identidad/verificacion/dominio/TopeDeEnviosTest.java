@@ -7,6 +7,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -27,6 +28,41 @@ class TopeDeEnviosTest {
     @ValueSource(ints = {3, 4, 100})
     void alcanzadoElTopeNoSeAdmiteOtro(int emitidos) {
         assertThat(TopeDeEnvios.admiteOtro(emitidos)).isFalse();
+    }
+
+    @Test
+    @DisplayName("por debajo del tope no hay que esperar")
+    void porDebajoDelTopeNoHayQueEsperar() {
+        List<Instant> emitidos = List.of(AHORA.minus(Duration.ofMinutes(30)), AHORA.minus(Duration.ofMinutes(10)));
+
+        assertThat(TopeDeEnvios.esperaHastaOtro(emitidos, AHORA)).isEqualTo(Duration.ZERO);
+    }
+
+    @Test
+    @DisplayName("con el tope alcanzado hay que esperar a que el más antiguo salga de la ventana")
+    void conElTopeHayQueEsperarAlMasAntiguo() {
+        List<Instant> emitidos = List.of(AHORA.minus(Duration.ofMinutes(50)),
+                AHORA.minus(Duration.ofMinutes(30)), AHORA.minus(Duration.ofMinutes(10)));
+
+        assertThat(TopeDeEnvios.esperaHastaOtro(emitidos, AHORA)).isEqualTo(Duration.ofMinutes(10));
+    }
+
+    @Test
+    @DisplayName("el orden en que llegan las fechas no cambia la espera")
+    void elOrdenNoImporta() {
+        List<Instant> emitidos = List.of(AHORA.minus(Duration.ofMinutes(10)),
+                AHORA.minus(Duration.ofMinutes(50)), AHORA.minus(Duration.ofMinutes(30)));
+
+        assertThat(TopeDeEnvios.esperaHastaOtro(emitidos, AHORA)).isEqualTo(Duration.ofMinutes(10));
+    }
+
+    @Test
+    @DisplayName("si hubiera más del tope, la espera llega hasta que solo queden dos en la ventana")
+    void conMasDelTopeSeEsperaHastaQueQuedenDos() {
+        List<Instant> emitidos = List.of(AHORA.minus(Duration.ofMinutes(55)), AHORA.minus(Duration.ofMinutes(40)),
+                AHORA.minus(Duration.ofMinutes(30)), AHORA.minus(Duration.ofMinutes(10)));
+
+        assertThat(TopeDeEnvios.esperaHastaOtro(emitidos, AHORA)).isEqualTo(Duration.ofMinutes(20));
     }
 
     @Test

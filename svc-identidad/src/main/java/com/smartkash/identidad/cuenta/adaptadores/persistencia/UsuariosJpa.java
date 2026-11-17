@@ -39,6 +39,14 @@ interface UsuariosJpa extends Repository<UsuarioEntidad, UUID> {
     Optional<UsuarioEntidad> findByEmailNormalizado(String emailNormalizado);
 
     /**
+     * Busca la fila de la cuenta con ese identificador.
+     *
+     * @param id identificador de la cuenta
+     * @return la fila, o una caja vacía si no existe
+     */
+    Optional<UsuarioEntidad> findById(UUID id);
+
+    /**
      * Inserta una cuenta solo si su correo no está ya registrado.
      *
      * <p>Por qué con SQL propio: {@code ON CONFLICT DO NOTHING} le pide a PostgreSQL que,

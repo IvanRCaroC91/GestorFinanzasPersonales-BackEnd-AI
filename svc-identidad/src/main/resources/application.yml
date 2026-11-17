@@ -51,6 +51,11 @@ identidad:
   correo:
     remitente: ${IDENTIDAD_CORREO_REMITENTE:}
 
+  # Dirección de la web a la que apuntan los enlaces de verificación de los correos. Sin ella
+  # el servicio no arranca.
+  verificacion:
+    direccion-base: ${IDENTIDAD_ENLACE_BASE:}
+
   # Tokens de acceso. Los dos valores llegan por variables de entorno y no tienen valor por
   # defecto: si falta alguno, el servicio no arranca y el error dice cuál.
   token:

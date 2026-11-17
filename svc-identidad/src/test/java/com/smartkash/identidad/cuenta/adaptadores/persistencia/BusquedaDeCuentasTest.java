@@ -91,6 +91,19 @@ class BusquedaDeCuentasTest {
     }
 
     /**
+     * La cuenta también se encuentra por su identificador, que es lo que lleva el token de
+     * acceso. Un identificador sin cuenta no encuentra nada.
+     */
+    @Test
+    void encuentra_la_cuenta_por_su_identificador() {
+        Usuario guardada = usuarioCon(correoAlAzar());
+        usuarios.guardar(guardada);
+
+        assertThat(usuarios.buscarPorId(guardada.id())).contains(guardada);
+        assertThat(usuarios.buscarPorId(UUID.randomUUID())).isEmpty();
+    }
+
+    /**
      * El rol y el estado se leen de la fila, no se suponen. Aquí se cambian directamente en
      * la tabla, como ocurrirá cuando la persona verifique su correo, y la lectura debe
      * reflejar los valores nuevos.

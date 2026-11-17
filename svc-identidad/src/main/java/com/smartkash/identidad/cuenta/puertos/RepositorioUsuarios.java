@@ -44,6 +44,17 @@ public interface RepositorioUsuarios {
     Optional<Usuario> buscarPorCorreo(CorreoNormalizado correo);
 
     /**
+     * Busca la cuenta con ese identificador.
+     *
+     * <p>Para qué sirve: en las rutas protegidas, la cuenta sale del token de acceso, que la
+     * identifica por su identificador y no por su correo.</p>
+     *
+     * @param usuarioId el identificador de la cuenta
+     * @return la cuenta, o una caja vacía si no existe (por ejemplo, porque ya se borró)
+     */
+    Optional<Usuario> buscarPorId(UUID usuarioId);
+
+    /**
      * Guarda una cuenta nueva.
      *
      * <p>Reglas: aunque antes se haya consultado {@link #existeConCorreo}, otra

@@ -232,7 +232,7 @@ class VerificarCorreoTest {
         }
 
         @Override
-        public int contarEmitidosDesde(UUID usuarioId, Instant desde) {
+        public List<Instant> emitidosDesde(UUID usuarioId, Instant desde) {
             throw new UnsupportedOperationException("La verificación no lo usa.");
         }
 
@@ -263,6 +263,11 @@ class VerificarCorreoTest {
 
         @Override
         public boolean existeConCorreo(CorreoNormalizado correo) {
+            throw new UnsupportedOperationException("La verificación no lo usa.");
+        }
+
+        @Override
+        public Optional<Usuario> buscarPorId(UUID usuarioId) {
             throw new UnsupportedOperationException("La verificación no lo usa.");
         }
 

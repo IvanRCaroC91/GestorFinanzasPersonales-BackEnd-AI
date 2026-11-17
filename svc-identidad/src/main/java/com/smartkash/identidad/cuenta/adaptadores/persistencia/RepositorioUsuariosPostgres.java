@@ -68,6 +68,17 @@ class RepositorioUsuariosPostgres implements RepositorioUsuarios {
         return tabla.findByEmailNormalizado(correo.valor()).map(RepositorioUsuariosPostgres::aUsuario);
     }
 
+    /**
+     * Busca la cuenta con ese identificador.
+     *
+     * @param usuarioId el identificador de la cuenta
+     * @return la cuenta, o una caja vacía si no existe
+     */
+    @Override
+    public Optional<Usuario> buscarPorId(UUID usuarioId) {
+        return tabla.findById(usuarioId).map(RepositorioUsuariosPostgres::aUsuario);
+    }
+
     /* Convierte una fila leída en la clase de negocio. */
     private static Usuario aUsuario(UsuarioEntidad fila) {
         return new Usuario(

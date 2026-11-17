@@ -11,6 +11,7 @@ import java.sql.Types;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -108,23 +109,24 @@ class RepositorioTokensDeUnUsoPostgres implements RepositorioTokensDeUnUso {
     }
 
     /**
-     * Cuenta los tokens emitidos a una cuenta desde un momento dado.
+     * Devuelve cuándo se emitió cada token de una cuenta desde un momento dado.
      *
      * @param usuarioId la cuenta
-     * @param desde     momento desde el que se cuenta
-     * @return cuántos se emitieron
+     * @param desde     momento desde el que se cuenta, incluido
+     * @return las fechas de emisión, de la más antigua a la más reciente
      */
     @Override
-    public int contarEmitidosDesde(UUID usuarioId, Instant desde) {
+    public List<Instant> emitidosDesde(UUID usuarioId, Instant desde) {
         return jdbc.sql("""
-                        SELECT count(*) FROM tokens_un_solo_uso
+                        SELECT creado_en FROM tokens_un_solo_uso
                         WHERE usuario_id = :usuarioId AND tipo = :tipo AND creado_en >= :desde
+                        ORDER BY creado_en
                         """)
                 .param("usuarioId", usuarioId)
                 .param("tipo", TIPO)
                 .param("desde", momento(desde), Types.TIMESTAMP_WITH_TIMEZONE)
-                .query(Integer.class)
-                .single();
+                .query((fila, numero) -> instante(fila, "creado_en"))
+                .list();
     }
 
     /**

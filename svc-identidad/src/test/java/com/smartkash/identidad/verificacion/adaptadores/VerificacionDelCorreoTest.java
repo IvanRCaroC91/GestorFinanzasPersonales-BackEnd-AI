@@ -3,7 +3,9 @@ package com.smartkash.identidad.verificacion.adaptadores;
 import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
 import com.smartkash.identidad.cuenta.dominio.Usuario;
 import com.smartkash.identidad.cuenta.puertos.RepositorioUsuarios;
+import com.smartkash.identidad.sesion.puertos.EmisorTokenAcceso;
 import com.smartkash.identidad.verificacion.dominio.TokenVerificacion;
+import com.smartkash.identidad.verificacion.puertos.EnviadorCorreos;
 import com.smartkash.identidad.verificacion.puertos.RepositorioTokensDeUnUso;
 import com.smartkash.identidad.verificacion.puertos.UnidadDeTrabajo;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +16,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -41,6 +44,10 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
@@ -63,6 +70,7 @@ class VerificacionDelCorreoTest {
             new PostgreSQLContainer("postgres:18").withInitScript("db/roles-de-prueba.sql");
 
     private static final String RUTA = "/api/v1/auth/verificacion-correo";
+    private static final String RUTA_REENVIO = "/api/v1/auth/verificacion-correo/reenvio";
     private static final String HASH = "$argon2id$v=19$m=1,t=1,p=1$c2FsdGRlcHJ1ZWJh$aGFzaGRlcHJ1ZWJh";
     private static final int HILOS = 10;
 
@@ -80,6 +88,16 @@ class VerificacionDelCorreoTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private EmisorTokenAcceso emisorTokens;
+
+    /*
+     * Un doble del enviador: sustituye al real para que las pruebas no necesiten un servidor de
+     * correo y puedan comprobar a quién se envía. El envío real tiene su propia prueba.
+     */
+    @MockitoBean
+    private EnviadorCorreos enviador;
 
     private MockMvc mvc;
     private Usuario cuenta;
@@ -156,16 +174,20 @@ class VerificacionDelCorreoTest {
         }
     }
 
-    /** Se cuentan solo los tokens de esa cuenta emitidos desde el momento indicado. */
+    /**
+     * Se devuelven, de la más antigua a la más reciente, las fechas de emisión de los tokens de
+     * esa cuenta emitidos desde el momento indicado; ni los anteriores ni los de otras cuentas.
+     */
     @Test
-    void cuenta_los_emitidos_desde_un_momento() {
+    void devuelve_los_emitidos_desde_un_momento() {
         guardado(ahora.minus(Duration.ofMinutes(90)));
-        guardado(ahora.minus(Duration.ofMinutes(30)));
         guardado(ahora.minus(Duration.ofMinutes(10)));
+        guardado(ahora.minus(Duration.ofMinutes(30)));
         Usuario otra = otraCuenta();
         tokens.guardar(TokenVerificacion.nuevo(otra.id(), huellaAlAzar(), ahora.minus(Duration.ofMinutes(5))));
 
-        assertThat(tokens.contarEmitidosDesde(cuenta.id(), ahora.minus(Duration.ofHours(1)))).isEqualTo(2);
+        assertThat(tokens.emitidosDesde(cuenta.id(), ahora.minus(Duration.ofHours(1))))
+                .containsExactly(ahora.minus(Duration.ofMinutes(30)), ahora.minus(Duration.ofMinutes(10)));
     }
 
     /**
@@ -278,7 +300,96 @@ class VerificacionDelCorreoTest {
         }
     }
 
+    // ---------- Reenvío ----------
+
+    /** Sin token de acceso, el reenvío responde 401. */
+    @Test
+    void reenviar_sin_token_responde_401() throws Exception {
+        MockHttpServletResponse respuesta = mvc.perform(post(RUTA_REENVIO)).andReturn().getResponse();
+
+        assertThat(respuesta.getStatus()).isEqualTo(401);
+        verifyNoInteractions(enviador);
+    }
+
+    /**
+     * Con el token de una cuenta pendiente responde 202 con un mensaje, guarda un enlace nuevo y
+     * envía el correo a esa cuenta.
+     */
+    @Test
+    void reenviar_a_una_cuenta_pendiente_envia_un_enlace() throws Exception {
+        MockHttpServletResponse respuesta = reenviar(cuenta);
+
+        assertThat(respuesta.getStatus()).isEqualTo(202);
+        assertThat(respuesta.getContentAsString(StandardCharsets.UTF_8)).startsWith("{\"mensaje\":\"");
+        assertThat(enlacesDe(cuenta)).isEqualTo(1);
+        verify(enviador).enviarVerificacion(argThat(correo -> correo.destinatario().equals(cuenta.correoOriginal())));
+    }
+
+    /**
+     * Una cuenta ya verificada recibe exactamente la misma respuesta, pero no se le envía nada.
+     */
+    @Test
+    void cuenta_verificada_y_pendiente_reciben_la_misma_respuesta() throws Exception {
+        Usuario verificada = otraCuenta();
+        usuarios.marcarVerificada(verificada.id(), ahora);
+
+        MockHttpServletResponse paraPendiente = reenviar(cuenta);
+        MockHttpServletResponse paraVerificada = reenviar(verificada);
+
+        assertThat(huellaDeRespuesta(paraVerificada)).isEqualTo(huellaDeRespuesta(paraPendiente));
+        assertThat(enlacesDe(verificada)).isZero();
+        verify(enviador, never()).enviarVerificacion(
+                argThat(correo -> correo.destinatario().equals(verificada.correoOriginal())));
+    }
+
+    /** El cuarto reenvío en una hora responde 429 con el tiempo de espera. */
+    @Test
+    void el_cuarto_reenvio_en_una_hora_responde_429() throws Exception {
+        for (int i = 0; i < 3; i++) {
+            assertThat(reenviar(cuenta).getStatus()).isEqualTo(202);
+        }
+
+        MockHttpServletResponse respuesta = reenviar(cuenta);
+
+        assertThat(respuesta.getStatus()).isEqualTo(429);
+        assertThat(Long.parseLong(respuesta.getHeader("Retry-After"))).isBetween(3500L, 3600L);
+        assertThat(respuesta.getContentAsString(StandardCharsets.UTF_8))
+                .contains("\"type\":\"/problemas/demasiadas-solicitudes\"");
+        assertThat(enlacesDe(cuenta)).isEqualTo(3);
+    }
+
+    /**
+     * La cuenta sale del token de acceso. Aunque el cuerpo nombre otra cuenta, se ignora: el
+     * enlace es para la dueña del token.
+     */
+    @Test
+    void la_cuenta_sale_del_token_y_no_del_cuerpo() throws Exception {
+        Usuario otra = otraCuenta();
+
+        mvc.perform(post(RUTA_REENVIO)
+                .header("Authorization", "Bearer " + tokenDeAcceso(cuenta))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"usuarioId\":\"" + otra.id() + "\"}"));
+
+        assertThat(enlacesDe(cuenta)).isEqualTo(1);
+        assertThat(enlacesDe(otra)).isZero();
+    }
+
     // ---------- Ayudas ----------
+
+    private MockHttpServletResponse reenviar(Usuario quien) throws Exception {
+        return mvc.perform(post(RUTA_REENVIO).header("Authorization", "Bearer " + tokenDeAcceso(quien)))
+                .andReturn().getResponse();
+    }
+
+    private String tokenDeAcceso(Usuario quien) {
+        return emisorTokens.emitir(quien, Instant.now().truncatedTo(ChronoUnit.SECONDS)).valor();
+    }
+
+    private int enlacesDe(Usuario quien) {
+        return jdbc.queryForObject("SELECT count(*) FROM tokens_un_solo_uso WHERE usuario_id = ?",
+                Integer.class, quien.id());
+    }
 
     private MockHttpServletResponse verificar(String valor) throws Exception {
         return mvc.perform(post(RUTA).contentType(MediaType.APPLICATION_JSON)

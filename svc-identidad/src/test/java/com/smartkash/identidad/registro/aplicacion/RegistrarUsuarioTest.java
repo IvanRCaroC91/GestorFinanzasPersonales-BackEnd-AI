@@ -318,6 +318,11 @@ class RegistrarUsuarioTest {
             throw new UnsupportedOperationException("El registro no verifica cuentas.");
         }
 
+        @Override
+        public Optional<Usuario> buscarPorId(java.util.UUID usuarioId) {
+            return guardados.stream().filter(usuario -> usuario.id().equals(usuarioId)).findFirst();
+        }
+
         private boolean yaGuardado(CorreoNormalizado correo) {
             return guardados.stream().anyMatch(usuario -> usuario.correo().equals(correo));
         }

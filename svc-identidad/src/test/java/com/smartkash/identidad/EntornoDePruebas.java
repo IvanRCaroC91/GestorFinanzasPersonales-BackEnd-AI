@@ -9,7 +9,8 @@ import java.util.Map;
 
 /**
  * Entrega a todas las pruebas que arrancan el servicio completo la configuración que en la
- * realidad llega por variables de entorno: clave de firma, emisor de tokens y correo.
+ * realidad llega por variables de entorno: clave de firma, emisor de tokens, correo y dirección
+ * de la web para los enlaces.
  *
  * <p>Qué es un inicializador: código que Spring ejecuta justo antes de crear los beans. Este
  * se registra en {@code src/test/resources/META-INF/spring.factories}, así que solo existe en
@@ -47,7 +48,8 @@ public class EntornoDePruebas
                         "identidad.token.emisor", EMISOR,
                         "spring.mail.host", "127.0.0.1",
                         "spring.mail.port", "9",
-                        "identidad.correo.remitente", REMITENTE)));
+                        "identidad.correo.remitente", REMITENTE,
+                        "identidad.verificacion.direccion-base", "https://app.pruebas.invalid")));
     }
 
     private static synchronized Path archivoDeClave() {
