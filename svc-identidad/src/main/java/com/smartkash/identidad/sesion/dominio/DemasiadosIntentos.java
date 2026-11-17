@@ -18,6 +18,7 @@ import java.util.Objects;
  */
 public final class DemasiadosIntentos extends RuntimeException {
 
+    /** Cuánto falta para que termine el bloqueo. */
     private final Duration espera;
 
     /**

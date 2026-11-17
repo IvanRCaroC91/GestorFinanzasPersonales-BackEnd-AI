@@ -60,4 +60,18 @@ public record CorreoNormalizado(String valor) {
                     "El correo no puede tener más de " + LARGO_MAXIMO + " caracteres.");
         }
     }
+
+    /**
+     * Devuelve un texto para depuración sin el correo.
+     *
+     * <p>Un record normalmente muestra su valor. Aquí se oculta para que el correo, que es un
+     * dato personal, no termine escrito en un log por accidente. Para obtenerlo, usa
+     * {@link #valor()}.</p>
+     *
+     * @return un texto fijo
+     */
+    @Override
+    public String toString() {
+        return "CorreoNormalizado[oculto]";
+    }
 }

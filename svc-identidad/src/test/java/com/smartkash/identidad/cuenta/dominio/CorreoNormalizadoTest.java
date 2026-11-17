@@ -10,6 +10,7 @@ import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -95,5 +96,14 @@ class CorreoNormalizadoTest {
         CorreoNormalizado correo = new CorreoNormalizado(correo254ConEspacios);
 
         assertEquals(254, correo.valor().length());
+    }
+
+    @Test
+    @DisplayName("el texto de depuración no muestra el correo")
+    void elTextoDeDepuracionNoMuestraElCorreo() {
+        String texto = new CorreoNormalizado("ana.secreta@correo.com").toString();
+
+        assertFalse(texto.contains("ana.secreta"));
+        assertFalse(texto.contains("correo.com"));
     }
 }

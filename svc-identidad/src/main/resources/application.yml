@@ -1,3 +1,11 @@
+server:
+  # La dirección IP de quien llama es siempre la de la conexión directa. Spring Boot podría
+  # empezar a creerse las cabeceras de proxy (X-Forwarded-For) por su cuenta al detectar
+  # ciertas plataformas en la nube; aquí se prohíbe. Cualquiera puede escribir esas cabeceras,
+  # y un atacante que las cambiara en cada intento esquivaría el límite de fallos por IP. Se
+  # revisará cuando exista el gateway.
+  forward-headers-strategy: none
+
 spring:
   application:
     name: svc-identidad

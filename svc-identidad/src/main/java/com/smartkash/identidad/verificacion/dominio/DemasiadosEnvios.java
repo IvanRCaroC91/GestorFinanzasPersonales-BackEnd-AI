@@ -14,6 +14,7 @@ import java.util.Objects;
  */
 public final class DemasiadosEnvios extends RuntimeException {
 
+    /** Cuánto falta para poder pedir otro enlace. */
     private final Duration espera;
 
     /**

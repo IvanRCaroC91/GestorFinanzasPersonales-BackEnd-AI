@@ -36,6 +36,7 @@ public class NombreNoValido extends RuntimeException {
         MUY_LARGO
     }
 
+    /** Qué regla del nombre se incumplió. */
     private final Motivo motivo;
 
     /**
