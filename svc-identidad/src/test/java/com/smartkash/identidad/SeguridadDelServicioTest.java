@@ -1,5 +1,12 @@
 package com.smartkash.identidad;
 
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
+import com.smartkash.identidad.cuenta.dominio.EstadoCuenta;
+import com.smartkash.identidad.cuenta.dominio.Rol;
+import com.smartkash.identidad.cuenta.dominio.Usuario;
+import com.smartkash.identidad.sesion.puertos.EmisorTokenAcceso;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +21,13 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -43,6 +56,9 @@ class SeguridadDelServicioTest {
     @Autowired
     private WebApplicationContext contexto;
 
+    @Autowired
+    private EmisorTokenAcceso emisor;
+
     private MockMvc mvc;
 
     @BeforeEach
@@ -61,6 +77,41 @@ class SeguridadDelServicioTest {
                 .andReturn().getResponse();
 
         assertThat(respuesta.getStatus()).isEqualTo(400);
+    }
+
+    /**
+     * Las claves públicas se publican sin token, en formato JWKS, y sin la parte privada.
+     */
+    @Test
+    void publica_las_claves_publicas_sin_la_parte_privada() throws Exception {
+        MockHttpServletResponse respuesta = mvc.perform(get("/.well-known/jwks.json"))
+                .andReturn().getResponse();
+
+        assertThat(respuesta.getStatus()).isEqualTo(200);
+        assertThat(respuesta.getContentType()).startsWith(MediaType.APPLICATION_JSON_VALUE);
+        RSAKey publicada = (RSAKey) JWKSet.parse(respuesta.getContentAsString(StandardCharsets.UTF_8))
+                .getKeys().getFirst();
+        assertThat(publicada.isPrivate()).isFalse();
+        assertThat(publicada.getKeyID()).isNotBlank();
+    }
+
+    /**
+     * Con la clave publicada se puede comprobar un token emitido por el servicio. Es lo que
+     * harán los demás servicios: descargar las claves y validar los tokens sin llamar a este.
+     */
+    @Test
+    void la_clave_publicada_comprueba_los_tokens_del_servicio() throws Exception {
+        String json = mvc.perform(get("/.well-known/jwks.json")).andReturn().getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        RSAKey publicada = (RSAKey) JWKSet.parse(json).getKeys().getFirst();
+        Usuario cuenta = new Usuario(UUID.randomUUID(), "Ana", "ana@correo.com",
+                new CorreoNormalizado("ana@correo.com"), "hash-cualquiera", Rol.USUARIO, EstadoCuenta.ACTIVA);
+        String token = emisor.emitir(cuenta, Instant.now().truncatedTo(ChronoUnit.SECONDS)).valor();
+
+        Jwt comprobado = NimbusJwtDecoder.withPublicKey(publicada.toRSAPublicKey()).build().decode(token);
+
+        assertThat(comprobado.getSubject()).isEqualTo(cuenta.id().toString());
+        assertThat(comprobado.getHeaders()).containsEntry("kid", publicada.getKeyID());
     }
 
     /** Cualquier otra ruta exige token y responde con el 401 estándar del servicio. */

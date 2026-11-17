@@ -8,6 +8,8 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.ECGenParameterSpec;
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -107,6 +109,33 @@ class ClaveDeFirmaTest {
         assertThatThrownBy(() -> ClaveDeFirma.desdeArchivo(archivo))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("RSA");
+    }
+
+    /**
+     * El conjunto público de claves lleva una sola clave RSA para firmar con RS256, con su
+     * identificador y su parte pública (módulo {@code n} y exponente {@code e}), y ninguno de
+     * los datos privados que define el estándar ({@code d}, {@code p}, {@code q}, {@code dp},
+     * {@code dq}, {@code qi}, {@code oth}).
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void el_conjunto_publico_no_contiene_la_parte_privada() {
+        ClaveDeFirma clave = ClaveDeFirma.desdeArchivo(archivoCon(PAR_3072));
+
+        Map<String, Object> conjunto = clave.conjuntoPublico();
+
+        assertThat(conjunto).containsOnlyKeys("keys");
+        List<Map<String, Object>> claves = (List<Map<String, Object>>) conjunto.get("keys");
+        assertThat(claves).hasSize(1);
+        assertThat(claves.getFirst())
+                .containsEntry("kty", "RSA")
+                .containsEntry("use", "sig")
+                .containsEntry("alg", "RS256")
+                .containsEntry("kid", clave.id())
+                .containsKeys("n", "e")
+                .doesNotContainKeys("d", "p", "q", "dp", "dq", "qi", "oth");
+        String exponentePrivado = clave.paraFirmar().getPrivateExponent().toString();
+        assertThat(conjunto.toString()).doesNotContain(exponentePrivado);
     }
 
     /** El texto de depuración muestra el identificador, nunca la clave. */

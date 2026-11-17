@@ -2,6 +2,7 @@ package com.smartkash.identidad.sesion.adaptadores.seguridad;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 
@@ -18,6 +19,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Map;
 
 /**
  * Clave RSA con la que el servicio firma los tokens de acceso.
@@ -102,6 +104,23 @@ public final class ClaveDeFirma {
         } catch (JOSEException e) {
             throw new IllegalStateException("No se pudo obtener la clave pública.", e);
         }
+    }
+
+    /**
+     * Devuelve la parte pública en formato JWKS, listo para publicarse.
+     *
+     * <p>Qué es JWKS: un formato estándar (RFC 7517) para publicar claves públicas como JSON:
+     * un objeto con una lista {@code keys}. Cada clave lleva su tipo ({@code kty}), su uso
+     * ({@code use=sig}, firmar), su algoritmo, su identificador ({@code kid}) y los dos números
+     * de la parte pública RSA ({@code n} y {@code e}).</p>
+     *
+     * <p>Regla: se construye a partir de la clave pública ({@code toPublicJWK}), así que es
+     * imposible que lleve ningún dato privado.</p>
+     *
+     * @return el conjunto de claves públicas como mapa, que Spring convierte en JSON
+     */
+    public Map<String, Object> conjuntoPublico() {
+        return new JWKSet(jwk.toPublicJWK()).toJSONObject();
     }
 
     /**
