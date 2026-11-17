@@ -1,8 +1,8 @@
-package com.smartkash.identidad.registro.puertos;
+package com.smartkash.identidad.cuenta.puertos;
 
-import com.smartkash.identidad.registro.dominio.CorreoNormalizado;
-import com.smartkash.identidad.registro.dominio.CorreoYaRegistrado;
-import com.smartkash.identidad.registro.dominio.Usuario;
+import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
+import com.smartkash.identidad.cuenta.dominio.CorreoYaRegistrado;
+import com.smartkash.identidad.cuenta.dominio.Usuario;
 
 /**
  * Lugar donde se guardan y se consultan las cuentas de usuario.

@@ -1,16 +1,16 @@
 package com.smartkash.identidad.registro.aplicacion;
 
 import com.smartkash.identidad.registro.dominio.Autorizacion;
-import com.smartkash.identidad.registro.dominio.CorreoNormalizado;
-import com.smartkash.identidad.registro.dominio.CorreoYaRegistrado;
+import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
+import com.smartkash.identidad.cuenta.dominio.CorreoYaRegistrado;
 import com.smartkash.identidad.registro.dominio.ErrorDeRegistro;
 import com.smartkash.identidad.registro.dominio.ErrorDeRegistro.Motivo;
 import com.smartkash.identidad.registro.dominio.PoliticaContrasena;
-import com.smartkash.identidad.registro.dominio.Usuario;
-import com.smartkash.identidad.registro.puertos.HasheadorContrasena;
+import com.smartkash.identidad.cuenta.dominio.Usuario;
+import com.smartkash.identidad.cuenta.puertos.HasheadorContrasena;
 import com.smartkash.identidad.registro.puertos.RepositorioAutorizaciones;
 import com.smartkash.identidad.registro.puertos.RepositorioPoliticas;
-import com.smartkash.identidad.registro.puertos.RepositorioUsuarios;
+import com.smartkash.identidad.cuenta.puertos.RepositorioUsuarios;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

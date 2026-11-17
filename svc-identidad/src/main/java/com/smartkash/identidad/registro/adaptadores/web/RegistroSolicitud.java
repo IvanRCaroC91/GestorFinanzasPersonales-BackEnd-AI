@@ -2,7 +2,7 @@ package com.smartkash.identidad.registro.adaptadores.web;
 
 import com.smartkash.identidad.registro.aplicacion.DatosDeRegistro;
 import com.smartkash.identidad.registro.dominio.PoliticaContrasena;
-import com.smartkash.identidad.registro.dominio.Usuario;
+import com.smartkash.identidad.cuenta.dominio.Usuario;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

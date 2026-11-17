@@ -1,4 +1,4 @@
-package com.smartkash.identidad.registro.adaptadores.persistencia;
+package com.smartkash.identidad.cuenta.adaptadores.persistencia;
 
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

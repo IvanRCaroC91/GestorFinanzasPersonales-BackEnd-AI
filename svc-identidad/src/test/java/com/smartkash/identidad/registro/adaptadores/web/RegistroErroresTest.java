@@ -1,7 +1,7 @@
 package com.smartkash.identidad.registro.adaptadores.web;
 
 import com.smartkash.identidad.registro.dominio.Autorizacion;
-import com.smartkash.identidad.registro.puertos.HasheadorContrasena;
+import com.smartkash.identidad.cuenta.puertos.HasheadorContrasena;
 import com.smartkash.identidad.registro.puertos.RepositorioAutorizaciones;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

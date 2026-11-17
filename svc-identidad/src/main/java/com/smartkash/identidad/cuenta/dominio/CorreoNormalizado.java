@@ -1,4 +1,4 @@
-package com.smartkash.identidad.registro.dominio;
+package com.smartkash.identidad.cuenta.dominio;
 
 import java.util.Locale;
 

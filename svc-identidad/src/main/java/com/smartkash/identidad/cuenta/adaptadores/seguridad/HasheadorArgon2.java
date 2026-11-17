@@ -1,6 +1,6 @@
-package com.smartkash.identidad.registro.adaptadores.seguridad;
+package com.smartkash.identidad.cuenta.adaptadores.seguridad;
 
-import com.smartkash.identidad.registro.puertos.HasheadorContrasena;
+import com.smartkash.identidad.cuenta.puertos.HasheadorContrasena;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.stereotype.Component;
 

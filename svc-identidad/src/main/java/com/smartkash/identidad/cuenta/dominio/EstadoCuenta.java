@@ -1,4 +1,4 @@
-package com.smartkash.identidad.registro.dominio;
+package com.smartkash.identidad.cuenta.dominio;
 
 /**
  * Estado en el que se encuentra una cuenta a lo largo de su vida.

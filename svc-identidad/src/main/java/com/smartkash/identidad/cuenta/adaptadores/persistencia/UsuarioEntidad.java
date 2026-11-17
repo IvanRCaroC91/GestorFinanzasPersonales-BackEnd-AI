@@ -1,4 +1,4 @@
-package com.smartkash.identidad.registro.adaptadores.persistencia;
+package com.smartkash.identidad.cuenta.adaptadores.persistencia;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

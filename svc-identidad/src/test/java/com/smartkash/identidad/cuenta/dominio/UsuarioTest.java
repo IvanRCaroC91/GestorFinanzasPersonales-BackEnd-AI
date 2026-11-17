@@ -1,5 +1,6 @@
-package com.smartkash.identidad.registro.dominio;
+package com.smartkash.identidad.cuenta.dominio;
 
+import com.smartkash.identidad.registro.dominio.ErrorDeRegistro;
 import com.smartkash.identidad.registro.dominio.ErrorDeRegistro.Motivo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

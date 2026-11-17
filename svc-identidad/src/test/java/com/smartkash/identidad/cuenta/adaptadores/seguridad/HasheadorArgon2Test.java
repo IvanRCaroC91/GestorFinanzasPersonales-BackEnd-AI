@@ -1,4 +1,4 @@
-package com.smartkash.identidad.registro.adaptadores.seguridad;
+package com.smartkash.identidad.cuenta.adaptadores.seguridad;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
