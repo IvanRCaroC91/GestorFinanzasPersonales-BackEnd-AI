@@ -25,8 +25,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/auth")
 class RegistroController {
 
-    /** Único mensaje que devuelve el registro, se haya creado la cuenta o no. */
-    static final String MENSAJE = "Hemos recibido tu solicitud de registro.";
+    /**
+     * Único mensaje que devuelve el registro, se haya creado la cuenta o no. Habla del correo
+     * de verificación en condicional para que sea cierto en los dos casos.
+     */
+    static final String MENSAJE = "Hemos recibido tu solicitud de registro. "
+            + "Si el correo no tenía cuenta, te enviamos un mensaje para verificarlo.";
 
     private final RegistrarUsuario registrarUsuario;
 

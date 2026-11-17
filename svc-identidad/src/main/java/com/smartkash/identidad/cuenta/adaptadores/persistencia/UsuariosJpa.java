@@ -6,6 +6,7 @@ import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,6 +37,14 @@ interface UsuariosJpa extends Repository<UsuarioEntidad, UUID> {
      * @return la fila, o una caja vacía si no existe
      */
     Optional<UsuarioEntidad> findByEmailNormalizado(String emailNormalizado);
+
+    /**
+     * Busca la fila de la cuenta con ese identificador.
+     *
+     * @param id identificador de la cuenta
+     * @return la fila, o una caja vacía si no existe
+     */
+    Optional<UsuarioEntidad> findById(UUID id);
 
     /**
      * Inserta una cuenta solo si su correo no está ya registrado.
@@ -77,4 +86,27 @@ interface UsuariosJpa extends Repository<UsuarioEntidad, UUID> {
             @Param("hashContrasena") String hashContrasena,
             @Param("rol") String rol,
             @Param("estado") String estado);
+
+    /**
+     * Anota la verificación del correo en una sola sentencia.
+     *
+     * <p>Qué hace cada línea: {@code COALESCE} conserva la fecha de verificación si ya había
+     * una; el {@code CASE} pasa a activa solo una cuenta pendiente de verificación; además se
+     * actualizan la fecha de modificación y el contador de versión de la fila.</p>
+     *
+     * @param id    identificador de la cuenta
+     * @param ahora momento de la verificación
+     * @return 1 si la cuenta existe; 0 si no
+     */
+    @Modifying
+    @Transactional
+    @Query(nativeQuery = true, value = """
+            UPDATE usuarios
+            SET verificado_en = COALESCE(verificado_en, :ahora),
+                estado = CASE WHEN estado = 'PENDIENTE_VERIFICACION' THEN 'ACTIVA' ELSE estado END,
+                actualizado_en = :ahora,
+                version = version + 1
+            WHERE id = :id
+            """)
+    int marcarVerificada(@Param("id") UUID id, @Param("ahora") Instant ahora);
 }

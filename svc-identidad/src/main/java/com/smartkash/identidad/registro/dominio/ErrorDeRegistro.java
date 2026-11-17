@@ -61,7 +61,10 @@ public class ErrorDeRegistro extends RuntimeException {
         VERSION_POLITICA_NO_VIGENTE
     }
 
+    /** Qué regla del registro se incumplió. */
     private final Motivo motivo;
+
+    /** Nombre del campo de la solicitud que causó el error. */
     private final String campo;
 
     /**

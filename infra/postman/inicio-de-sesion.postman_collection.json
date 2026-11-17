@@ -1,0 +1,436 @@
+{
+  "info": {
+    "name": "SmartKash - Verificación del correo e inicio de sesión (local)",
+    "description": "Prueba manual del recorrido completo contra el servicio de identidad arrancado en este equipo y el Mailpit de compose.yaml.\n\nEjecuta las peticiones en orden (o la colección entera con el Runner). La primera crea una cuenta con un correo nuevo; las de Mailpit leen el enlace del correo recibido, así que no hace falta copiar nada a mano.\n\nAvisos:\n- La última petición bloquea la cuenta de prueba durante 1 minuto, a propósito.\n- Cada ejecución completa suma 7 inicios de sesión fallidos desde tu IP. Con 20 en 15 minutos la IP queda bloqueada: si ejecutas la colección más de dos veces seguidas, espera 15 minutos.\n- La cookie de renovación lleva Secure; Postman la acepta en http://localhost.\n\nSolo para desarrollo local. Los datos son inventados: la contraseña que aparece aquí es un valor de prueba, no una credencial real.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "mailpitUrl", "value": "http://localhost:8025" },
+    { "key": "correo", "value": "" },
+    { "key": "contrasenaDePrueba", "value": "una frase larga y dificil 2026" },
+    { "key": "tokenDelEnlace", "value": "" },
+    { "key": "tokenDelPrimerEnlace", "value": "" },
+    { "key": "tokenAcceso", "value": "" },
+    { "key": "cuerpoDelPrimer401", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Registro (202)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Correo distinto en cada ejecución.",
+              "pm.collectionVariables.set('correo', 'persona.' + Date.now() + '@ejemplo.com');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 202', () => pm.response.to.have.status(202));",
+              "pm.test('El mensaje habla del correo de verificación en condicional', () => {",
+              "    pm.expect(pm.response.json().mensaje).to.include('Si el correo no tenía cuenta');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/auth/registro",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Ana Prueba\",\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasenaDePrueba}}\",\n  \"aceptaPolitica\": true,\n  \"versionPolitica\": \"1.0\"\n}"
+        }
+      }
+    },
+    {
+      "name": "2. Mailpit: leer el enlace del correo",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// El correo sale en segundo plano: se da un segundo de margen.",
+              "setTimeout(() => {}, 1000);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Mailpit devuelve los mensajes del más reciente al más antiguo.",
+              "const correo = pm.collectionVariables.get('correo');",
+              "const mensaje = pm.response.json().messages.find(m => m.To[0].Address === correo);",
+              "pm.test('Llegó un correo a la cuenta nueva', () => pm.expect(mensaje).to.not.be.undefined);",
+              "pm.sendRequest(pm.collectionVariables.get('mailpitUrl') + '/api/v1/message/' + mensaje.ID, (error, respuesta) => {",
+              "    const texto = respuesta.json().Text;",
+              "    const encontrado = texto.match(/verificar-correo#token=([A-Za-z0-9_-]+)/);",
+              "    pm.test('El correo lleva el enlace de verificación', () => pm.expect(encontrado).to.not.be.null);",
+              "    pm.collectionVariables.set('tokenDelEnlace', encontrado[1]);",
+              "    pm.collectionVariables.set('tokenDelPrimerEnlace', encontrado[1]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{mailpitUrl}}/api/v1/messages"
+      }
+    },
+    {
+      "name": "3. Inicio de sesión con la cuenta pendiente (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+              "const sesion = pm.response.json();",
+              "pm.collectionVariables.set('tokenAcceso', sesion.tokenAcceso);",
+              "pm.test('Devuelve el token de acceso y la cuenta pendiente', () => {",
+              "    pm.expect(sesion.tipoToken).to.eql('Bearer');",
+              "    pm.expect(sesion.usuario.estado).to.eql('PENDIENTE_VERIFICACION');",
+              "    pm.expect(pm.response.text()).to.not.include(pm.collectionVariables.get('contrasenaDePrueba'));",
+              "});",
+              "pm.test('El token de renovación va en una cookie segura', () => {",
+              "    const cookie = pm.response.headers.get('Set-Cookie');",
+              "    pm.expect(cookie).to.match(/^renovacion=/);",
+              "    ['HttpOnly', 'Secure', 'SameSite=Strict', 'Path=/api/v1/auth'].forEach(a => pm.expect(cookie).to.include(a));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/auth/inicio-sesion",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasenaDePrueba}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "4. Contraseña errónea (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 401 con el error genérico', () => {",
+              "    pm.response.to.have.status(401);",
+              "    pm.expect(pm.response.json().detail).to.eql('Correo o contraseña incorrectos.');",
+              "});",
+              "pm.collectionVariables.set('cuerpoDelPrimer401', pm.response.text());"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/auth/inicio-sesion",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"otra frase cualquiera\"\n}"
+        }
+      }
+    },
+    {
+      "name": "5. Correo sin cuenta (401 idéntico)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 401', () => pm.response.to.have.status(401));",
+              "pm.test('El cuerpo es idéntico al de la contraseña errónea', () => {",
+              "    pm.expect(pm.response.text()).to.eql(pm.collectionVariables.get('cuerpoDelPrimer401'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/auth/inicio-sesion",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"nadie.{{correo}}\",\n  \"contrasena\": \"{{contrasenaDePrueba}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "6. Reenvío sin token (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 401: la ruta exige token', () => pm.response.to.have.status(401));",
+              "pm.test('Pide un token Bearer sin dar el motivo', () => {",
+              "    pm.expect(pm.response.headers.get('WWW-Authenticate')).to.eql('Bearer');",
+              "    pm.expect(pm.response.json().type).to.eql('/problemas/no-autenticado');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/auth/verificacion-correo/reenvio"
+      }
+    },
+    {
+      "name": "7. Reenvío con token (202)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 202 con un mensaje', () => {",
+              "    pm.response.to.have.status(202);",
+              "    pm.expect(Object.keys(pm.response.json())).to.eql(['mensaje']);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{tokenAcceso}}" }],
+        "url": "{{baseUrl}}/api/v1/auth/verificacion-correo/reenvio"
+      }
+    },
+    {
+      "name": "8. Mailpit: leer el enlace nuevo",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "setTimeout(() => {}, 1000);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const correo = pm.collectionVariables.get('correo');",
+              "const mensajes = pm.response.json().messages.filter(m => m.To[0].Address === correo);",
+              "pm.test('Han llegado dos correos a la cuenta', () => pm.expect(mensajes.length).to.eql(2));",
+              "pm.sendRequest(pm.collectionVariables.get('mailpitUrl') + '/api/v1/message/' + mensajes[0].ID, (error, respuesta) => {",
+              "    const encontrado = respuesta.json().Text.match(/verificar-correo#token=([A-Za-z0-9_-]+)/);",
+              "    pm.test('El enlace nuevo es distinto del primero', () => {",
+              "        pm.expect(encontrado[1]).to.not.eql(pm.collectionVariables.get('tokenDelPrimerEnlace'));",
+              "    });",
+              "    pm.collectionVariables.set('tokenDelEnlace', encontrado[1]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{mailpitUrl}}/api/v1/messages"
+      }
+    },
+    {
+      "name": "9. El primer enlace ya no vale (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 400 con el código ENLACE_NO_VALIDO', () => {",
+              "    pm.response.to.have.status(400);",
+              "    pm.expect(pm.response.json().codigo).to.eql('ENLACE_NO_VALIDO');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/auth/verificacion-correo",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"{{tokenDelPrimerEnlace}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "10. Verificar con el enlace nuevo (204)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 204 sin cuerpo', () => {",
+              "    pm.response.to.have.status(204);",
+              "    pm.expect(pm.response.text()).to.eql('');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/auth/verificacion-correo",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"{{tokenDelEnlace}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "11. El mismo enlace otra vez (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 400: el enlace es de un solo uso', () => {",
+              "    pm.response.to.have.status(400);",
+              "    pm.expect(pm.response.json().codigo).to.eql('ENLACE_NO_VALIDO');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/auth/verificacion-correo",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"{{tokenDelEnlace}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "12. Inicio de sesión con la cuenta activa (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200 y la cuenta ya está activa', () => {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.json().usuario.estado).to.eql('ACTIVA');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/auth/inicio-sesion",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasenaDePrueba}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "13. Claves públicas (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200 sin token', () => pm.response.to.have.status(200));",
+              "pm.test('Publica una clave RSA para RS256 sin la parte privada', () => {",
+              "    const clave = pm.response.json().keys[0];",
+              "    pm.expect(clave.kty).to.eql('RSA');",
+              "    pm.expect(clave.alg).to.eql('RS256');",
+              "    ['d', 'p', 'q', 'dp', 'dq', 'qi'].forEach(privado => pm.expect(clave).to.not.have.property(privado));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/.well-known/jwks.json"
+      }
+    },
+    {
+      "name": "14. Bloqueo tras 5 fallos (429) — bloquea la cuenta 1 minuto",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Cinco intentos con una contraseña errónea, uno detrás de otro.",
+              "const fallar = (restantes) => {",
+              "    if (restantes === 0) { return; }",
+              "    pm.sendRequest({",
+              "        url: pm.collectionVariables.get('baseUrl') + '/api/v1/auth/inicio-sesion',",
+              "        method: 'POST',",
+              "        header: { 'Content-Type': 'application/json' },",
+              "        body: { mode: 'raw', raw: JSON.stringify({ correo: pm.collectionVariables.get('correo'), contrasena: 'otra frase cualquiera' }) }",
+              "    }, () => fallar(restantes - 1));",
+              "};",
+              "fallar(5);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 429 aunque la contraseña sea la correcta', () => pm.response.to.have.status(429));",
+              "pm.test('Indica cuántos segundos esperar', () => {",
+              "    const segundos = Number(pm.response.headers.get('Retry-After'));",
+              "    pm.expect(segundos).to.be.within(1, 60);",
+              "    pm.expect(pm.response.json().type).to.eql('/problemas/demasiadas-solicitudes');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/auth/inicio-sesion",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasenaDePrueba}}\"\n}"
+        }
+      }
+    }
+  ]
+}

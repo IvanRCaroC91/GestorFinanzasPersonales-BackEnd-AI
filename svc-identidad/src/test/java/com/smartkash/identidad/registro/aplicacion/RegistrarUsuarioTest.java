@@ -10,6 +10,7 @@ import com.smartkash.identidad.registro.dominio.PoliticaContrasena;
 import com.smartkash.identidad.cuenta.dominio.Rol;
 import com.smartkash.identidad.cuenta.dominio.Usuario;
 import com.smartkash.identidad.cuenta.puertos.HasheadorContrasena;
+import com.smartkash.identidad.registro.puertos.AvisoDeCuentaNueva;
 import com.smartkash.identidad.registro.puertos.RepositorioAutorizaciones;
 import com.smartkash.identidad.registro.puertos.RepositorioPoliticas;
 import com.smartkash.identidad.cuenta.puertos.RepositorioUsuarios;
@@ -55,6 +56,7 @@ class RegistrarUsuarioTest {
     private final AutorizacionesEnMemoria autorizaciones = new AutorizacionesEnMemoria();
     private final PoliticasFalsas politicas = new PoliticasFalsas();
     private final HasheadorFalso hasheador = new HasheadorFalso();
+    private final AvisoFalso aviso = new AvisoFalso();
 
     private final RegistrarUsuario registrarUsuario = new RegistrarUsuario(
             usuarios,
@@ -62,6 +64,7 @@ class RegistrarUsuarioTest {
             politicas,
             hasheador,
             new PoliticaContrasena(contrasena -> false),
+            aviso,
             Clock.fixed(AHORA, ZoneOffset.UTC));
 
     // ---------- Registro correcto ----------
@@ -222,6 +225,55 @@ class RegistrarUsuarioTest {
         assertEquals(2, hasheador.recibidas.size());
     }
 
+    // ---------- Aviso de cuenta nueva ----------
+
+    @Test
+    @DisplayName("una cuenta nueva se avisa una vez, con la cuenta guardada")
+    void unaCuentaNuevaSeAvisa() {
+        registrarUsuario.ejecutar(datos("Ana", "ana@correo.com", CONTRASENA_VALIDA));
+
+        assertEquals(List.of(usuarios.guardados.getFirst()), aviso.avisadas);
+    }
+
+    @Test
+    @DisplayName("el aviso se da al final, cuando la cuenta y su autorización ya están guardadas")
+    void elAvisoVaAlFinal() {
+        registrarUsuario.ejecutar(datos("Ana", "ana@correo.com", CONTRASENA_VALIDA));
+
+        assertEquals(List.of(1), aviso.autorizacionesAlAvisar);
+    }
+
+    @Test
+    @DisplayName("con un correo ya registrado no se avisa de nada")
+    void correoRepetidoNoSeAvisa() {
+        registrarUsuario.ejecutar(datos("Ana", "ana@correo.com", CONTRASENA_VALIDA));
+        aviso.avisadas.clear();
+
+        registrarUsuario.ejecutar(datos("Otra", "ANA@correo.com", CONTRASENA_VALIDA));
+
+        assertTrue(aviso.avisadas.isEmpty());
+    }
+
+    @Test
+    @DisplayName("si otra solicitud gana la carrera al guardar, no se avisa")
+    void carreraAlGuardarNoSeAvisa() {
+        registrarUsuario.ejecutar(datos("Ana", "ana@correo.com", CONTRASENA_VALIDA));
+        aviso.avisadas.clear();
+        usuarios.consultaDiceQueNoExiste = true;
+
+        registrarUsuario.ejecutar(datos("Otra", "ana@correo.com", CONTRASENA_VALIDA));
+
+        assertTrue(aviso.avisadas.isEmpty());
+    }
+
+    @Test
+    @DisplayName("si los datos no son válidos, no se avisa")
+    void datosInvalidosNoSeAvisa() {
+        assertThrows(ErrorDeRegistro.class, () -> registrarUsuario.ejecutar(datos("  ", "ana@correo.com", CONTRASENA_VALIDA)));
+
+        assertTrue(aviso.avisadas.isEmpty());
+    }
+
     @Test
     @DisplayName("los datos inválidos dan el mismo error exista o no el correo")
     void losErroresNoDelatanSiElCorreoExiste() {
@@ -313,6 +365,16 @@ class RegistrarUsuarioTest {
             guardados.add(usuario);
         }
 
+        @Override
+        public void marcarVerificada(java.util.UUID usuarioId, Instant ahora) {
+            throw new UnsupportedOperationException("El registro no verifica cuentas.");
+        }
+
+        @Override
+        public Optional<Usuario> buscarPorId(java.util.UUID usuarioId) {
+            return guardados.stream().filter(usuario -> usuario.id().equals(usuarioId)).findFirst();
+        }
+
         private boolean yaGuardado(CorreoNormalizado correo) {
             return guardados.stream().anyMatch(usuario -> usuario.correo().equals(correo));
         }
@@ -326,6 +388,22 @@ class RegistrarUsuarioTest {
         @Override
         public void guardar(Autorizacion autorizacion) {
             guardadas.add(autorizacion);
+        }
+    }
+
+    /**
+     * Aviso que apunta las cuentas recibidas y cuántas autorizaciones había guardadas en ese
+     * momento, para comprobar que el aviso llega al final.
+     */
+    private final class AvisoFalso implements AvisoDeCuentaNueva {
+
+        final List<Usuario> avisadas = new ArrayList<>();
+        final List<Integer> autorizacionesAlAvisar = new ArrayList<>();
+
+        @Override
+        public void cuentaCreada(Usuario cuenta) {
+            avisadas.add(cuenta);
+            autorizacionesAlAvisar.add(autorizaciones.guardadas.size());
         }
     }
 

@@ -1,3 +1,11 @@
+server:
+  # La dirección IP de quien llama es siempre la de la conexión directa. Spring Boot podría
+  # empezar a creerse las cabeceras de proxy (X-Forwarded-For) por su cuenta al detectar
+  # ciertas plataformas en la nube; aquí se prohíbe. Cualquiera puede escribir esas cabeceras,
+  # y un atacante que las cambiara en cada intento esquivaría el límite de fallos por IP. Se
+  # revisará cuando exista el gateway.
+  forward-headers-strategy: none
+
 spring:
   application:
     name: svc-identidad
@@ -34,9 +42,30 @@ spring:
     # petición web.
     open-in-view: false
 
-# Tokens de acceso. Los dos valores llegan por variables de entorno y no tienen valor por
-# defecto: si falta alguno, el servicio no arranca y el error dice cuál.
+  # Servidor de correo (SMTP). En local es Mailpit, que guarda los correos sin entregarlos.
+  # El servidor no tiene valor por defecto: si falta, el servicio no arranca y lo dice.
+  mail:
+    host: ${IDENTIDAD_SMTP_HOST:}
+    port: ${IDENTIDAD_SMTP_PUERTO:1025}
+    # Tiempos máximos, en milisegundos, para conectar, leer y escribir. Sin ellos, un servidor
+    # de correo que no responde dejaría la petición esperando para siempre.
+    properties:
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+
 identidad:
+  # Correos que envía el servicio. Sin remitente el servicio no arranca.
+  correo:
+    remitente: ${IDENTIDAD_CORREO_REMITENTE:}
+
+  # Dirección de la web a la que apuntan los enlaces de verificación de los correos. Sin ella
+  # el servicio no arranca.
+  verificacion:
+    direccion-base: ${IDENTIDAD_ENLACE_BASE:}
+
+  # Tokens de acceso. Los dos valores llegan por variables de entorno y no tienen valor por
+  # defecto: si falta alguno, el servicio no arranca y el error dice cuál.
   token:
     # Quién emite los tokens (dato "iss").
     emisor: ${IDENTIDAD_TOKEN_EMISOR:}

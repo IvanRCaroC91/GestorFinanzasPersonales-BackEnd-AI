@@ -45,6 +45,13 @@ public class ManejadorErroresComun extends ResponseEntityExceptionHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(ManejadorErroresComun.class);
 
+    /**
+     * Constructor vacío. Spring lo usa al importar el manejador en cada servicio.
+     */
+    public ManejadorErroresComun() {
+        // Sin trabajo propio: el comportamiento lo dan los métodos de la clase.
+    }
+
     /** Largo máximo del nombre de un campo desconocido al escribirlo en el log. */
     private static final int LARGO_MAXIMO_EN_LOG = 100;
 

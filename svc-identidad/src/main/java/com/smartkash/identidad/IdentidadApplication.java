@@ -24,6 +24,13 @@ import org.springframework.context.annotation.Import;
 public class IdentidadApplication {
 
     /**
+     * Constructor vacío. Spring lo usa para crear la clase de arranque; no hace nada más.
+     */
+    public IdentidadApplication() {
+        // Sin trabajo propio: toda la configuración la aportan las anotaciones de la clase.
+    }
+
+    /**
      * Arranca el servicio.
      *
      * @param args argumentos de línea de comandos; Spring los usa para sobrescribir

@@ -4,7 +4,9 @@ import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
 import com.smartkash.identidad.cuenta.dominio.CorreoYaRegistrado;
 import com.smartkash.identidad.cuenta.dominio.Usuario;
 
+import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Lugar donde se guardan y se consultan las cuentas de usuario.
@@ -42,6 +44,17 @@ public interface RepositorioUsuarios {
     Optional<Usuario> buscarPorCorreo(CorreoNormalizado correo);
 
     /**
+     * Busca la cuenta con ese identificador.
+     *
+     * <p>Para qué sirve: en las rutas protegidas, la cuenta sale del token de acceso, que la
+     * identifica por su identificador y no por su correo.</p>
+     *
+     * @param usuarioId el identificador de la cuenta
+     * @return la cuenta, o una caja vacía si no existe (por ejemplo, porque ya se borró)
+     */
+    Optional<Usuario> buscarPorId(UUID usuarioId);
+
+    /**
      * Guarda una cuenta nueva.
      *
      * <p>Reglas: aunque antes se haya consultado {@link #existeConCorreo}, otra
@@ -53,4 +66,16 @@ public interface RepositorioUsuarios {
      * @throws CorreoYaRegistrado si ya existe una cuenta con el mismo correo
      */
     void guardar(Usuario usuario);
+
+    /**
+     * Anota que la persona confirmó su correo.
+     *
+     * <p>Reglas: una cuenta pendiente de verificación pasa a activa; una en otro estado (por
+     * ejemplo, en periodo de gracia de eliminación) conserva su estado. La fecha de verificación
+     * se anota solo la primera vez. Si la cuenta no existe, no hace nada.</p>
+     *
+     * @param usuarioId la cuenta
+     * @param ahora     momento de la verificación
+     */
+    void marcarVerificada(UUID usuarioId, Instant ahora);
 }
