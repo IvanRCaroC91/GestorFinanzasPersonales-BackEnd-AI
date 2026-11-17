@@ -7,11 +7,15 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.time.Instant;
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -64,6 +68,34 @@ class UsuarioTest {
         assertEquals("Ana", usuario.nombre());
         assertEquals(CORREO, usuario.correo());
         assertEquals(HASH, usuario.hashContrasena());
+    }
+
+    // ---------- Eliminación programada ----------
+
+    @Test
+    @DisplayName("una cuenta nueva no tiene eliminación programada")
+    void laCuentaNuevaNoTieneEliminacionProgramada() {
+        assertNull(Usuario.nuevo("Ana", CORREO_ESCRITO, CORREO, HASH).eliminacionProgramadaEn());
+    }
+
+    @Test
+    @DisplayName("conserva la fecha de eliminación programada de una cuenta en periodo de gracia")
+    void conservaLaFechaDeEliminacionProgramada() {
+        Instant fecha = Instant.parse("2026-12-01T00:00:00Z");
+
+        Usuario usuario = new Usuario(UUID.randomUUID(), "Ana", CORREO_ESCRITO, CORREO, HASH,
+                Rol.USUARIO, EstadoCuenta.PENDIENTE_ELIMINACION, fecha);
+
+        assertEquals(fecha, usuario.eliminacionProgramadaEn());
+    }
+
+    @Test
+    @DisplayName("creada sin fecha de eliminación, la cuenta no tiene eliminación programada")
+    void sinFechaDeEliminacionQuedaVacia() {
+        Usuario usuario = new Usuario(UUID.randomUUID(), "Ana", CORREO_ESCRITO, CORREO, HASH,
+                Rol.USUARIO, EstadoCuenta.ACTIVA);
+
+        assertNull(usuario.eliminacionProgramadaEn());
     }
 
     // ---------- Nombre ----------

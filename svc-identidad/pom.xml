@@ -75,9 +75,26 @@
             <version>1.87</version>
         </dependency>
 
+        <!-- Seguridad de las rutas: cadena de filtros de Spring Security y validacion del token
+             de acceso (JWT) en cada peticion. Incluye Nimbus, que tambien se usa para firmar
+             los tokens. Al anadirlo, toda ruta exige token salvo las declaradas publicas en
+             la configuracion de seguridad. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Utilidades de prueba de Spring Security: aplicar la cadena de filtros real en las
+             pruebas web y simular peticiones con y sin token. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server-test</artifactId>
             <scope>test</scope>
         </dependency>
 

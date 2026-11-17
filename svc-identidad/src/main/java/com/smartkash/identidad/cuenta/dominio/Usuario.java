@@ -2,6 +2,7 @@ package com.smartkash.identidad.cuenta.dominio;
 
 import com.smartkash.identidad.cuenta.dominio.NombreNoValido.Motivo;
 
+import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -35,6 +36,9 @@ import java.util.UUID;
  *                       nunca la contraseña en claro
  * @param rol            qué puede hacer la cuenta
  * @param estado         en qué punto de su vida está la cuenta
+ * @param eliminacionProgramadaEn cuándo se borrará la cuenta si la persona pidió eliminarla y
+ *                       está corriendo el periodo de gracia; {@code null} si no hay borrado
+ *                       programado. La decide el servidor al pedir la eliminación.
  */
 public record Usuario(
         UUID id,
@@ -43,7 +47,8 @@ public record Usuario(
         CorreoNormalizado correo,
         String hashContrasena,
         Rol rol,
-        EstadoCuenta estado) {
+        EstadoCuenta estado,
+        Instant eliminacionProgramadaEn) {
 
     /** Cantidad máxima de caracteres del nombre. */
     public static final int LARGO_MAXIMO_NOMBRE = 100;
@@ -89,6 +94,28 @@ public record Usuario(
         if (hashContrasena.isBlank()) {
             throw new IllegalArgumentException("El hash de la contraseña es obligatorio.");
         }
+    }
+
+    /**
+     * Crea una cuenta sin eliminación programada.
+     *
+     * <p>Es un atajo para el caso más común: la cuenta no está en periodo de gracia. Equivale
+     * a llamar al constructor completo con {@code null} como fecha de eliminación.</p>
+     *
+     * @param id             identificador único de la cuenta
+     * @param nombre         nombre para mostrar
+     * @param correoOriginal correo como lo escribió la persona
+     * @param correo         el mismo correo normalizado
+     * @param hashContrasena hash de la contraseña
+     * @param rol            qué puede hacer la cuenta
+     * @param estado         en qué punto de su vida está la cuenta
+     * @throws NombreNoValido           si el nombre no es válido
+     * @throws NullPointerException     si falta cualquier otro dato
+     * @throws IllegalArgumentException si el hash está vacío o los correos no corresponden
+     */
+    public Usuario(UUID id, String nombre, String correoOriginal, CorreoNormalizado correo,
+                   String hashContrasena, Rol rol, EstadoCuenta estado) {
+        this(id, nombre, correoOriginal, correo, hashContrasena, rol, estado, null);
     }
 
     /**

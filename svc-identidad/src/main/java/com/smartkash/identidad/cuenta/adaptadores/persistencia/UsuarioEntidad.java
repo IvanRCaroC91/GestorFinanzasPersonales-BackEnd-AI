@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -16,8 +17,8 @@ import java.util.UUID;
  * describe cómo está guardada.</p>
  *
  * <p>Qué columnas declara: las que hacen falta para reconstruir una cuenta al leerla
- * (identificador, correo, nombre, hash, rol y estado). Las fechas de verificación y de
- * eliminación programada se añadirán cuando alguna funcionalidad tenga que leerlas. Las
+ * (identificador, correo, nombre, hash, rol, estado y fecha de eliminación programada). La
+ * fecha de verificación se añadirá cuando la verificación del correo tenga que escribirla. Las
  * cuentas no se insertan a través de esta clase, sino con la consulta de
  * {@link UsuariosJpa#insertarSiElCorreoEstaLibre}.</p>
  *
@@ -53,6 +54,9 @@ class UsuarioEntidad {
 
     @Column(name = "estado")
     private String estado;
+
+    @Column(name = "eliminacion_programada_en")
+    private Instant eliminacionProgramadaEn;
 
     /** JPA exige un constructor sin parámetros para poder crear el objeto al leer una fila. */
     protected UsuarioEntidad() {
@@ -91,5 +95,10 @@ class UsuarioEntidad {
     /** @return estado de la cuenta, con el texto exacto que hay en la tabla */
     String estado() {
         return estado;
+    }
+
+    /** @return cuándo se borrará la cuenta, o {@code null} si no hay borrado programado */
+    Instant eliminacionProgramadaEn() {
+        return eliminacionProgramadaEn;
     }
 }

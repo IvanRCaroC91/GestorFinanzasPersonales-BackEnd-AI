@@ -37,6 +37,21 @@ class ArquitecturaTest {
                     .allowEmptyShould(true);
 
     /**
+     * El caso de uso del inicio de sesión tampoco depende de frameworks.
+     *
+     * <p>Por qué: coordina reglas de seguridad delicadas (bloqueos, comparación de
+     * contraseñas, emisión de tokens) y se prueba entero con puertos falsos, sin arrancar
+     * Spring. Spring lo crea desde fuera, con una clase de configuración en los
+     * adaptadores, sin que el caso de uso lo sepa.</p>
+     */
+    @ArchTest
+    static final ArchRule aplicacion_de_la_sesion_no_depende_de_frameworks =
+            noClasses().that().resideInAPackage("com.smartkash.identidad.sesion.aplicacion..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "org.springframework..", "jakarta.persistence..",
+                            "com.fasterxml.jackson..");
+
+    /**
      * El paquete compartido de cuentas no puede depender de las funcionalidades que lo usan.
      *
      * <p>Por qué: {@code cuenta} reúne lo que comparten el registro, el inicio de sesión y
@@ -50,6 +65,22 @@ class ArquitecturaTest {
     @ArchTest
     static final ArchRule cuenta_no_depende_de_las_funcionalidades =
             noClasses().that().resideInAPackage("com.smartkash.identidad.cuenta..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "com.smartkash.identidad.registro..",
+                            "com.smartkash.identidad.sesion..",
+                            "com.smartkash.identidad.verificacion..");
+
+    /**
+     * El paquete compartido de tokens tampoco puede depender de las funcionalidades que lo
+     * usan.
+     *
+     * <p>Por qué: generar valores aleatorios y calcular huellas lo necesitan tanto el inicio
+     * de sesión como la verificación del correo. Igual que con las cuentas, la dependencia
+     * va en un solo sentido.</p>
+     */
+    @ArchTest
+    static final ArchRule tokens_no_depende_de_las_funcionalidades =
+            noClasses().that().resideInAPackage("com.smartkash.identidad.tokens..")
                     .should().dependOnClassesThat().resideInAnyPackage(
                             "com.smartkash.identidad.registro..",
                             "com.smartkash.identidad.sesion..",

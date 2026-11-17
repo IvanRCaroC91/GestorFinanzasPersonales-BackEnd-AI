@@ -14,6 +14,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -103,6 +105,25 @@ class BusquedaDeCuentasTest {
 
         assertThat(leida.rol()).isEqualTo(Rol.ADMIN);
         assertThat(leida.estado()).isEqualTo(EstadoCuenta.ACTIVA);
+    }
+
+    /**
+     * La fecha de eliminación programada se lee de la fila. Una cuenta recién registrada no
+     * tiene; cuando la persona pide eliminar su cuenta, la tabla guarda la fecha de borrado.
+     */
+    @Test
+    void lee_la_fecha_de_eliminacion_programada() {
+        Usuario guardada = usuarioCon(correoAlAzar());
+        usuarios.guardar(guardada);
+        assertThat(usuarios.buscarPorCorreo(guardada.correo()).orElseThrow().eliminacionProgramadaEn())
+                .isNull();
+
+        Instant fecha = Instant.parse("2026-12-01T00:00:00Z");
+        jdbc.update("UPDATE usuarios SET estado = 'PENDIENTE_ELIMINACION', eliminacion_programada_en = ? "
+                + "WHERE id = ?", Timestamp.from(fecha), guardada.id());
+
+        assertThat(usuarios.buscarPorCorreo(guardada.correo()).orElseThrow().eliminacionProgramadaEn())
+                .isEqualTo(fecha);
     }
 
     private static Usuario usuarioCon(String correo) {

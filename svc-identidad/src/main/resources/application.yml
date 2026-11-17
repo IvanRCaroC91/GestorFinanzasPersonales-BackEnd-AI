@@ -33,3 +33,13 @@ spring:
     # La conexión a la base se usa solo mientras dura el caso de uso, no durante toda la
     # petición web.
     open-in-view: false
+
+# Tokens de acceso. Los dos valores llegan por variables de entorno y no tienen valor por
+# defecto: si falta alguno, el servicio no arranca y el error dice cuál.
+identidad:
+  token:
+    # Quién emite los tokens (dato "iss").
+    emisor: ${IDENTIDAD_TOKEN_EMISOR:}
+    # Ruta del archivo PEM (PKCS#8) con la clave privada RSA de al menos 3072 bits. El archivo
+    # vive fuera del repositorio.
+    clave-firma-ruta: ${IDENTIDAD_CLAVE_FIRMA_RUTA:}

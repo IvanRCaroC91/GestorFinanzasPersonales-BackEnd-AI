@@ -29,6 +29,8 @@ public final class Problemas {
     public static final String CODIGO = "codigo";
 
     private static final URI TIPO_VALIDACION = URI.create("/problemas/validacion");
+    private static final URI TIPO_NO_AUTENTICADO = URI.create("/problemas/no-autenticado");
+    private static final URI TIPO_DEMASIADAS_SOLICITUDES = URI.create("/problemas/demasiadas-solicitudes");
     private static final URI TIPO_INTERNO = URI.create("/problemas/interno");
 
     private Problemas() {
@@ -49,6 +51,40 @@ public final class Problemas {
         if (!errores.isEmpty()) {
             problema.setProperty(ERRORES, List.copyOf(errores));
         }
+        return problema;
+    }
+
+    /**
+     * Crea el error de falta de autenticación, con código HTTP 401.
+     *
+     * <p>Cuándo se usa: cuando la petición no trae un token válido (ausente, caducado, mal
+     * firmado, de otro emisor...) y cuando unas credenciales no sirven al iniciar sesión. En
+     * ningún caso la explicación debe decir el motivo concreto: así no da pistas a quien
+     * prueba tokens o contraseñas.</p>
+     *
+     * @param detalle explicación genérica para la persona, la misma para todos los motivos
+     * @return el error listo para devolverse
+     */
+    public static ProblemDetail noAutenticado(String detalle) {
+        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, detalle);
+        problema.setType(TIPO_NO_AUTENTICADO);
+        problema.setTitle("Se requiere autenticación");
+        return problema;
+    }
+
+    /**
+     * Crea el error de demasiadas solicitudes, con código HTTP 429.
+     *
+     * <p>Quien lo use debe añadir a la respuesta la cabecera {@code Retry-After} con los
+     * segundos que hay que esperar.</p>
+     *
+     * @param detalle explicación para la persona
+     * @return el error listo para devolverse
+     */
+    public static ProblemDetail demasiadasSolicitudes(String detalle) {
+        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, detalle);
+        problema.setType(TIPO_DEMASIADAS_SOLICITUDES);
+        problema.setTitle("Demasiadas solicitudes");
         return problema;
     }
 
