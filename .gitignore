@@ -41,3 +41,7 @@ build/
 ### Proyecto ###
 .idea/
 .env
+### Claves ###
+# Las claves privadas viven fuera del repositorio; esto evita subir una por descuido.
+*.pem
+*.key

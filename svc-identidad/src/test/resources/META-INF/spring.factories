@@ -1,0 +1,2 @@
+# Solo en pruebas: genera una clave de firma temporal antes de arrancar el servicio.
+org.springframework.context.ApplicationContextInitializer=com.smartkash.identidad.ClaveDeFirmaParaPruebas

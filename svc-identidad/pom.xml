@@ -75,6 +75,14 @@
             <version>1.87</version>
         </dependency>
 
+        <!-- Firmar y comprobar tokens JWT. Trae Nimbus, la libreria estandar de JWT en Java,
+             pero no activa los filtros de seguridad: las rutas siguen como estan. La version
+             la fija Spring Boot. -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-jose</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
