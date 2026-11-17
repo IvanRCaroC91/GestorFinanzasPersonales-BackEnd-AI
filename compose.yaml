@@ -1,6 +1,7 @@
 # SOLO PARA DESARROLLO LOCAL. No usar este archivo para desplegar.
 #
-# Levanta un PostgreSQL 18 en tu equipo para arrancar los servicios fuera de las pruebas.
+# Levanta un PostgreSQL 18 y un buzón de correo de pruebas (Mailpit) en tu equipo para
+# arrancar los servicios fuera de las pruebas.
 # No contiene ninguna contraseña: todas se leen del archivo .env, que no se sube al
 # repositorio. Copia .env.ejemplo como .env y cambia los valores antes de arrancar.
 #
@@ -36,6 +37,16 @@ services:
       interval: 5s
       timeout: 3s
       retries: 12
+
+  # Servidor de correo para desarrollo: acepta todos los correos por SMTP y no entrega
+  # ninguno; los guarda y los enseña en http://localhost:8025, donde se puede abrir el
+  # enlace de verificación. Al parar el contenedor, los correos se pierden.
+  mailpit:
+    image: axllent/mailpit:v1.33.1
+    ports:
+      # Solo accesibles desde este equipo: SMTP (lo usa el servicio) y la página web.
+      - "127.0.0.1:${MAILPIT_PUERTO_SMTP:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_PUERTO_WEB:-8025}:8025"
 
 volumes:
   datos-postgres:
