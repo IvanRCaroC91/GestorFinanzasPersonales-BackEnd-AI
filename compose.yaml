@@ -1,0 +1,41 @@
+# SOLO PARA DESARROLLO LOCAL. No usar este archivo para desplegar.
+#
+# Levanta un PostgreSQL 18 en tu equipo para arrancar los servicios fuera de las pruebas.
+# No contiene ninguna contraseña: todas se leen del archivo .env, que no se sube al
+# repositorio. Copia .env.ejemplo como .env y cambia los valores antes de arrancar.
+#
+#   Arrancar:           docker compose up -d
+#   Parar:              docker compose down
+#   Parar y borrar BD:  docker compose down -v
+
+name: smartkash-local
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      # Administrador de PostgreSQL. Solo lo usa el script inicial; los servicios no.
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_CONTRASENA:?Falta POSTGRES_ADMIN_CONTRASENA en .env}
+      # Usuarios del servicio de identidad. El script inicial los crea con estas contraseñas.
+      IDENTIDAD_BD_USUARIO: ${IDENTIDAD_BD_USUARIO:?Falta IDENTIDAD_BD_USUARIO en .env}
+      IDENTIDAD_BD_CONTRASENA: ${IDENTIDAD_BD_CONTRASENA:?Falta IDENTIDAD_BD_CONTRASENA en .env}
+      IDENTIDAD_BD_MIGRADOR_USUARIO: ${IDENTIDAD_BD_MIGRADOR_USUARIO:?Falta IDENTIDAD_BD_MIGRADOR_USUARIO en .env}
+      IDENTIDAD_BD_MIGRADOR_CONTRASENA: ${IDENTIDAD_BD_MIGRADOR_CONTRASENA:?Falta IDENTIDAD_BD_MIGRADOR_CONTRASENA en .env}
+    ports:
+      # Solo accesible desde este equipo (127.0.0.1), nunca desde la red. El puerto externo
+      # no es el 5432 habitual para no chocar con otro PostgreSQL que ya tengas instalado.
+      - "127.0.0.1:${POSTGRES_PUERTO_LOCAL:-5433}:5432"
+    volumes:
+      # Los datos sobreviven a "docker compose down". Desde PostgreSQL 18 la imagen oficial
+      # guarda los datos bajo /var/lib/postgresql (antes era /var/lib/postgresql/data).
+      - datos-postgres:/var/lib/postgresql
+      # Scripts que PostgreSQL ejecuta una sola vez, cuando la carpeta de datos está vacía.
+      - ./infra/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --username postgres --dbname identidad"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  datos-postgres:
