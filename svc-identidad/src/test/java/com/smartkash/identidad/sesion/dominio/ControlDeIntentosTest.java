@@ -80,6 +80,34 @@ class ControlDeIntentosTest {
         assertEquals(Optional.empty(), control.esperaRestante(INICIO.plus(minutos(1))));
     }
 
+    @Test
+    @DisplayName("un intento durante el bloqueo no suma fallos ni alarga la espera")
+    void unIntentoDuranteElBloqueoNoCuenta() {
+        ControlDeIntentos bloqueado = fallosSeguidos(5, INICIO, CUENTA);
+        Instant enPlenoBloqueo = INICIO.plusSeconds(30);
+
+        ControlDeIntentos despues = bloqueado.trasOtroFallo(enPlenoBloqueo, CUENTA);
+
+        assertEquals(5, despues.fallos());
+        assertEquals(INICIO.plus(minutos(1)), despues.bloqueadoHasta());
+        assertEquals(bloqueado, despues);
+    }
+
+    @Test
+    @DisplayName("por mucho que se insista durante el bloqueo, el contador no cambia")
+    void insistirDuranteElBloqueoNoCambiaNada() {
+        ControlDeIntentos bloqueado = fallosSeguidos(5, INICIO, CUENTA);
+
+        ControlDeIntentos despues = bloqueado;
+        for (int segundo = 0; segundo < 60; segundo++) {
+            despues = despues.trasOtroFallo(INICIO.plusSeconds(segundo), CUENTA);
+        }
+
+        assertEquals(bloqueado, despues);
+        // Al terminar el bloqueo, el siguiente fallo es el sexto, no el sexagésimo quinto.
+        assertEquals(6, despues.trasOtroFallo(INICIO.plus(minutos(1)), CUENTA).fallos());
+    }
+
     // ---------- Espera creciente ----------
 
     @Test

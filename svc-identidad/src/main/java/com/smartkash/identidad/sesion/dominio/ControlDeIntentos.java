@@ -27,8 +27,9 @@ import java.util.Optional;
  *   <li>Los fallos se acumulan dentro de una ventana de tiempo que empieza con el primero.</li>
  *   <li>El fallo que alcanza el límite bloquea durante 1 minuto. Cada fallo posterior
  *       duplica la espera, hasta un tope de 15 minutos (ver {@link EsperaCreciente}).</li>
- *   <li>Mientras dura un bloqueo, los intentos se rechazan sin comprobar la contraseña, así
- *       que no son fallos y no se anotan aquí.</li>
+ *   <li>Mientras dura un bloqueo, los intentos se rechazan sin comprobar la contraseña y no
+ *       suman fallos. Esta clase lo garantiza por sí misma: aunque alguien le pida anotar
+ *       un fallo en pleno bloqueo, el contador no cambia.</li>
  *   <li>El contador vuelve a empezar cuando pasa una ventana completa sin fallos: contada
  *       desde el primer fallo si nunca hubo bloqueo, o desde el final del último bloqueo si
  *       lo hubo. Sin esta segunda parte, quien insiste vería su contador reiniciarse en
@@ -77,15 +78,23 @@ public record ControlDeIntentos(int fallos, Instant ventanaInicio, Instant bloqu
     /**
      * Devuelve cómo queda el contador después de un fallo más.
      *
+     * <p>Si hay un bloqueo en curso, el contador queda exactamente igual: ni suma ni
+     * alarga la espera. Así, insistir durante el bloqueo no empeora las cosas, y quien
+     * quiera dejar fuera al dueño de una cuenta no puede estirar el bloqueo martilleando.</p>
+     *
      * <p>Si ya pasó una ventana completa sin fallos, el anterior se olvida y este cuenta
      * como el primero. Si no, se suma y, cuando se alcanza o se supera el límite, empieza un
      * bloqueo que se mide desde este fallo.</p>
      *
      * @param ahora  momento del fallo
      * @param limite cuántos fallos se toleran y en cuánto tiempo
-     * @return el contador actualizado; este objeto no cambia
+     * @return el contador actualizado, o este mismo si hay un bloqueo en curso; este objeto
+     *         no cambia
      */
     public ControlDeIntentos trasOtroFallo(Instant ahora, LimiteDeIntentos limite) {
+        if (esperaRestante(ahora).isPresent()) {
+            return this;
+        }
         if (caducado(ahora, limite)) {
             return trasPrimerFallo(ahora, limite);
         }
