@@ -9,6 +9,7 @@ import com.smartkash.identidad.registro.dominio.ErrorDeRegistro.Motivo;
 import com.smartkash.identidad.registro.dominio.PoliticaContrasena;
 import com.smartkash.identidad.cuenta.dominio.Usuario;
 import com.smartkash.identidad.cuenta.puertos.HasheadorContrasena;
+import com.smartkash.identidad.registro.puertos.AvisoDeCuentaNueva;
 import com.smartkash.identidad.registro.puertos.RepositorioAutorizaciones;
 import com.smartkash.identidad.registro.puertos.RepositorioPoliticas;
 import com.smartkash.identidad.cuenta.puertos.RepositorioUsuarios;
@@ -28,7 +29,9 @@ import java.util.Objects;
  *
  * <p>De dónde vienen los datos: de {@link DatosDeRegistro}, que la capa web llena con el
  * cuerpo de la solicitud. A dónde van: a la tabla de usuarios y a la de autorizaciones,
- * a través de los repositorios.</p>
+ * a través de los repositorios. Cuando la cuenta es nueva, se avisa con
+ * {@link AvisoDeCuentaNueva}; quien atiende el aviso envía el primer enlace de verificación
+ * después de confirmar la transacción y sin hacer esperar la respuesta.</p>
  *
  * <p>Regla clave, no revelar si un correo ya existe: visto desde fuera, registrarse con
  * un correo nuevo y con uno ya registrado debe ser indistinguible. Por eso, cuando el
@@ -54,6 +57,7 @@ public class RegistrarUsuario {
     private final RepositorioPoliticas politicas;
     private final HasheadorContrasena hasheador;
     private final PoliticaContrasena politicaContrasena;
+    private final AvisoDeCuentaNueva avisoDeCuentaNueva;
     private final Clock reloj;
 
     /**
@@ -64,6 +68,7 @@ public class RegistrarUsuario {
      * @param politicas          dónde se consulta la versión vigente de la política
      * @param hasheador          quién calcula el hash de la contraseña
      * @param politicaContrasena reglas que debe cumplir la contraseña
+     * @param avisoDeCuentaNueva a quién se avisa cuando se crea una cuenta nueva
      * @param reloj              de dónde se toma la fecha y hora; en las pruebas es un
      *                           reloj detenido en un instante fijo
      * @throws NullPointerException si falta alguno
@@ -74,12 +79,14 @@ public class RegistrarUsuario {
             RepositorioPoliticas politicas,
             HasheadorContrasena hasheador,
             PoliticaContrasena politicaContrasena,
+            AvisoDeCuentaNueva avisoDeCuentaNueva,
             Clock reloj) {
         this.usuarios = Objects.requireNonNull(usuarios);
         this.autorizaciones = Objects.requireNonNull(autorizaciones);
         this.politicas = Objects.requireNonNull(politicas);
         this.hasheador = Objects.requireNonNull(hasheador);
         this.politicaContrasena = Objects.requireNonNull(politicaContrasena);
+        this.avisoDeCuentaNueva = Objects.requireNonNull(avisoDeCuentaNueva);
         this.reloj = Objects.requireNonNull(reloj);
     }
 
@@ -129,6 +136,10 @@ public class RegistrarUsuario {
 
         autorizaciones.guardar(
                 Autorizacion.aceptacionDePolitica(usuario.id(), versionVigente, reloj.instant()));
+
+        // Solo llega aquí una cuenta nueva. El aviso se da dentro de la transacción, y quien lo
+        // atiende actúa solo cuando esta se confirma.
+        avisoDeCuentaNueva.cuentaCreada(usuario);
     }
 
     /**

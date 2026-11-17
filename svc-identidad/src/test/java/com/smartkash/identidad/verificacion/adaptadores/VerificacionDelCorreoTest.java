@@ -3,7 +3,10 @@ package com.smartkash.identidad.verificacion.adaptadores;
 import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
 import com.smartkash.identidad.cuenta.dominio.Usuario;
 import com.smartkash.identidad.cuenta.puertos.RepositorioUsuarios;
+import com.smartkash.identidad.registro.aplicacion.DatosDeRegistro;
+import com.smartkash.identidad.registro.aplicacion.RegistrarUsuario;
 import com.smartkash.identidad.sesion.puertos.EmisorTokenAcceso;
+import com.smartkash.identidad.verificacion.aplicacion.EmitirEnlaceDeVerificacion;
 import com.smartkash.identidad.verificacion.dominio.TokenVerificacion;
 import com.smartkash.identidad.verificacion.puertos.EnviadorCorreos;
 import com.smartkash.identidad.verificacion.puertos.RepositorioTokensDeUnUso;
@@ -17,7 +20,10 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.junit.jupiter.Container;
@@ -44,8 +50,13 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.after;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -74,6 +85,9 @@ class VerificacionDelCorreoTest {
     private static final String HASH = "$argon2id$v=19$m=1,t=1,p=1$c2FsdGRlcHJ1ZWJh$aGFzaGRlcHJ1ZWJh";
     private static final int HILOS = 10;
 
+    /** Contraseña inventada que cumple las reglas del registro. */
+    private static final String CONTRASENA = "una frase larga y dificil 2026";
+
     @Autowired
     private WebApplicationContext contexto;
 
@@ -92,12 +106,25 @@ class VerificacionDelCorreoTest {
     @Autowired
     private EmisorTokenAcceso emisorTokens;
 
+    @Autowired
+    private RegistrarUsuario registrarUsuario;
+
+    @Autowired
+    private PlatformTransactionManager gestorDeTransacciones;
+
     /*
      * Un doble del enviador: sustituye al real para que las pruebas no necesiten un servidor de
      * correo y puedan comprobar a quién se envía. El envío real tiene su propia prueba.
      */
     @MockitoBean
     private EnviadorCorreos enviador;
+
+    /*
+     * Un espía del caso de uso real que emite los enlaces: hace su trabajo de verdad, pero deja
+     * comprobar cuándo se le llamó.
+     */
+    @MockitoSpyBean
+    private EmitirEnlaceDeVerificacion emitirEnlace;
 
     private MockMvc mvc;
     private Usuario cuenta;
@@ -375,7 +402,105 @@ class VerificacionDelCorreoTest {
         assertThat(enlacesDe(otra)).isZero();
     }
 
+    // ---------- Primer enlace al registrarse ----------
+
+    /**
+     * Al registrarse con un correo nuevo, se emite el primer enlace y se envía a ese correo. El
+     * envío ocurre en otro hilo, así que la prueba espera a que llegue (como mucho 5 segundos).
+     */
+    @Test
+    void registrarse_envia_el_primer_enlace() throws Exception {
+        String correo = "nueva." + UUID.randomUUID() + "@correo.com";
+
+        MockHttpServletResponse respuesta = registrarse(correo);
+
+        assertThat(respuesta.getStatus()).isEqualTo(202);
+        assertThat(respuesta.getContentAsString(StandardCharsets.UTF_8))
+                .contains("Si el correo no tenía cuenta, te enviamos un mensaje para verificarlo.");
+        verify(enviador, timeout(5_000)).enviarVerificacion(argThat(c -> c.destinatario().equals(correo)));
+        assertThat(jdbc.queryForObject("""
+                SELECT count(*) FROM tokens_un_solo_uso t JOIN usuarios u ON u.id = t.usuario_id
+                WHERE u.email_normalizado = ?""", Integer.class, correo)).isEqualTo(1);
+    }
+
+    /** Registrarse otra vez con el mismo correo no envía nada. */
+    @Test
+    void registrarse_con_un_correo_repetido_no_envia_nada() throws Exception {
+        String correo = "repetida." + UUID.randomUUID() + "@correo.com";
+        registrarse(correo);
+        verify(enviador, timeout(5_000)).enviarVerificacion(argThat(c -> c.destinatario().equals(correo)));
+        clearInvocations(enviador);
+
+        registrarse(correo.toUpperCase());
+
+        verify(enviador, after(1_500).never()).enviarVerificacion(any());
+    }
+
+    /**
+     * Si la transacción del registro se deshace, la cuenta no existe y ni siquiera se intenta
+     * emitir el enlace: el escuchador solo actúa después de confirmar.
+     */
+    @Test
+    void si_el_registro_se_deshace_ni_se_intenta_emitir() {
+        String correo = "deshecha." + UUID.randomUUID() + "@correo.com";
+
+        new TransactionTemplate(gestorDeTransacciones).executeWithoutResult(estado -> {
+            registrarUsuario.ejecutar(new DatosDeRegistro("Ana", correo, CONTRASENA, true, "1.0"));
+            estado.setRollbackOnly();
+        });
+
+        verify(emitirEnlace, after(1_500).never()).emitir(any());
+        verify(enviador, never()).enviarVerificacion(any());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM usuarios WHERE email_normalizado = ?",
+                Integer.class, correo)).isZero();
+    }
+
+    /**
+     * Mientras la transacción del registro sigue abierta no se emite nada; en cuanto se
+     * confirma, se emite el enlace de esa cuenta.
+     */
+    @Test
+    void el_enlace_se_emite_solo_despues_de_confirmar() {
+        String correo = "confirmada." + UUID.randomUUID() + "@correo.com";
+
+        new TransactionTemplate(gestorDeTransacciones).executeWithoutResult(estado -> {
+            registrarUsuario.ejecutar(new DatosDeRegistro("Ana", correo, CONTRASENA, true, "1.0"));
+            // La transacción sigue abierta: aunque pase un segundo, todavía no se emite nada.
+            verify(emitirEnlace, after(1_000).never()).emitir(any());
+        });
+
+        verify(emitirEnlace, timeout(5_000)).emitir(argThat(cuenta -> cuenta.correo().valor().equals(correo)));
+    }
+
+    /**
+     * La respuesta del registro no espera al correo: aunque el servidor de correo tarde 3
+     * segundos, el registro responde mucho antes, y el correo sale después.
+     */
+    @Test
+    void la_respuesta_del_registro_no_espera_al_correo() throws Exception {
+        doAnswer(invocacion -> {
+            Thread.sleep(3_000);
+            return null;
+        }).when(enviador).enviarVerificacion(any());
+        String correo = "lenta." + UUID.randomUUID() + "@correo.com";
+
+        long inicio = System.nanoTime();
+        MockHttpServletResponse respuesta = registrarse(correo);
+        Duration duracion = Duration.ofNanos(System.nanoTime() - inicio);
+
+        assertThat(respuesta.getStatus()).isEqualTo(202);
+        assertThat(duracion).isLessThan(Duration.ofMillis(2_000));
+        verify(enviador, timeout(6_000)).enviarVerificacion(argThat(c -> c.destinatario().equals(correo)));
+    }
+
     // ---------- Ayudas ----------
+
+    private MockHttpServletResponse registrarse(String correo) throws Exception {
+        return mvc.perform(post("/api/v1/auth/registro").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"nombre":"Ana","correo":"%s","contrasena":"%s","aceptaPolitica":true,"versionPolitica":"1.0"}
+                        """.formatted(correo, CONTRASENA)))
+                .andReturn().getResponse();
+    }
 
     private MockHttpServletResponse reenviar(Usuario quien) throws Exception {
         return mvc.perform(post(RUTA_REENVIO).header("Authorization", "Bearer " + tokenDeAcceso(quien)))
