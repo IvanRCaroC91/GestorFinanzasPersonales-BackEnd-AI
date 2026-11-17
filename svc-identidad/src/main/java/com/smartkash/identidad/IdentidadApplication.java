@@ -1,7 +1,9 @@
 package com.smartkash.identidad;
 
 import org.springframework.boot.SpringApplication;
+import com.smartkash.nucleo.web.errores.ManejadorErroresComun;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Import;
 
 /**
  * Punto de arranque del servicio de identidad.
@@ -13,8 +15,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * <p>Responsabilidad del servicio: gestionar a las personas que usan la aplicación, es
  * decir, el registro, el inicio de sesión, la emisión de tokens de acceso y los roles.
  * Las peticiones llegan desde el gateway, que es la única puerta de entrada al sistema.</p>
+ *
+ * <p>{@code @Import} añade el manejador de errores común, que vive en una librería
+ * compartida fuera del paquete de este servicio y por eso Spring no lo encontraría solo.</p>
  */
 @SpringBootApplication
+@Import(ManejadorErroresComun.class)
 public class IdentidadApplication {
 
     /**

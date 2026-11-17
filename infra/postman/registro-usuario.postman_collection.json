@@ -1,0 +1,169 @@
+{
+  "info": {
+    "name": "SmartKash - Registro de usuario (local)",
+    "description": "Prueba manual del registro contra el servicio de identidad arrancado en este equipo.\n\nEjecuta las peticiones en orden. La primera genera un correo nuevo y lo guarda en la variable `correo`, que usan las demás.\n\nSolo para desarrollo local. Los datos son inventados: la contraseña que aparece aquí es un valor de prueba, no una credencial real.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "correo", "value": "" },
+    { "key": "contrasenaDePrueba", "value": "una frase larga y dificil 2026" }
+  ],
+  "item": [
+    {
+      "name": "1. Registro correcto (202)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Correo distinto en cada ejecución, con mayúsculas para comprobar que se normaliza.",
+              "pm.collectionVariables.set('correo', 'Persona.' + Date.now() + '@Ejemplo.com');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 202', () => pm.response.to.have.status(202));",
+              "pm.test('Devuelve solo un mensaje', () => {",
+              "    const cuerpo = pm.response.json();",
+              "    pm.expect(Object.keys(cuerpo)).to.eql(['mensaje']);",
+              "    pm.collectionVariables.set('mensajeDelRegistro', cuerpo.mensaje);",
+              "});",
+              "pm.test('No devuelve la contraseña ni el correo', () => {",
+              "    pm.expect(pm.response.text()).to.not.include(pm.collectionVariables.get('contrasenaDePrueba'));",
+              "    pm.expect(pm.response.text()).to.not.include(pm.collectionVariables.get('correo'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/auth/registro",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Ana Prueba\",\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasenaDePrueba}}\",\n  \"aceptaPolitica\": true,\n  \"versionPolitica\": \"1.0\"\n}"
+        }
+      }
+    },
+    {
+      "name": "2. Mismo correo otra vez (202 idéntico)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 202, igual que un correo nuevo', () => pm.response.to.have.status(202));",
+              "pm.test('El mensaje es idéntico al del primer registro', () => {",
+              "    pm.expect(pm.response.json().mensaje).to.eql(pm.collectionVariables.get('mensajeDelRegistro'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/auth/registro",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Otra Persona\",\n  \"correo\": \"{{correo}}\",\n  \"contrasena\": \"{{contrasenaDePrueba}}\",\n  \"aceptaPolitica\": true,\n  \"versionPolitica\": \"1.0\"\n}"
+        }
+      }
+    },
+    {
+      "name": "3. Contraseña de 11 caracteres (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 400 en formato de error estándar', () => {",
+              "    pm.response.to.have.status(400);",
+              "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json');",
+              "});",
+              "pm.test('Señala el campo contrasena y el motivo', () => {",
+              "    const cuerpo = pm.response.json();",
+              "    pm.expect(cuerpo.type).to.eql('/problemas/validacion');",
+              "    pm.expect(cuerpo.codigo).to.eql('CONTRASENA_MUY_CORTA');",
+              "    pm.expect(cuerpo.errores[0].campo).to.eql('contrasena');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/auth/registro",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Ana Prueba\",\n  \"correo\": \"corta.{{correo}}\",\n  \"contrasena\": \"solo11letra\",\n  \"aceptaPolitica\": true,\n  \"versionPolitica\": \"1.0\"\n}"
+        }
+      }
+    },
+    {
+      "name": "4. Política sin aceptar (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 400', () => pm.response.to.have.status(400));",
+              "pm.test('Señala el campo aceptaPolitica y el motivo', () => {",
+              "    const cuerpo = pm.response.json();",
+              "    pm.expect(cuerpo.codigo).to.eql('POLITICA_NO_ACEPTADA');",
+              "    pm.expect(cuerpo.errores[0].campo).to.eql('aceptaPolitica');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/auth/registro",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Ana Prueba\",\n  \"correo\": \"sinpolitica.{{correo}}\",\n  \"contrasena\": \"{{contrasenaDePrueba}}\",\n  \"aceptaPolitica\": false,\n  \"versionPolitica\": \"1.0\"\n}"
+        }
+      }
+    },
+    {
+      "name": "5. Campo no permitido: rol (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 400: el rol no se puede elegir desde fuera', () => pm.response.to.have.status(400));",
+              "pm.test('No da detalles internos', () => {",
+              "    pm.expect(pm.response.json().type).to.eql('/problemas/validacion');",
+              "    pm.expect(pm.response.text()).to.not.include('smartkash');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/auth/registro",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Ana Prueba\",\n  \"correo\": \"conrol.{{correo}}\",\n  \"contrasena\": \"{{contrasenaDePrueba}}\",\n  \"aceptaPolitica\": true,\n  \"versionPolitica\": \"1.0\",\n  \"rol\": \"ADMIN\"\n}"
+        }
+      }
+    }
+  ]
+}

@@ -4,3 +4,32 @@ spring:
   threads:
     virtual:
       enabled: true
+
+  # Conexión a la base de datos del servicio. Ningún valor se escribe aquí: todos llegan por
+  # variables de entorno, para que no haya direcciones ni contraseñas en el repositorio.
+  # El servicio trabaja con un usuario de permisos limitados (leer y escribir datos).
+  datasource:
+    url: ${IDENTIDAD_BD_URL}
+    username: ${IDENTIDAD_BD_USUARIO}
+    password: ${IDENTIDAD_BD_CONTRASENA}
+
+  # Flyway aplica las migraciones al arrancar con otro usuario, el dueño del esquema, que es
+  # el único que puede crear o cambiar tablas.
+  flyway:
+    user: ${IDENTIDAD_BD_MIGRADOR_USUARIO}
+    password: ${IDENTIDAD_BD_MIGRADOR_CONTRASENA}
+
+  # Una petición con campos que el servicio no espera (por ejemplo, un rol) se rechaza con un
+  # error en lugar de ignorarlos en silencio.
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+
+  jpa:
+    # Las tablas las crea solo Flyway. Hibernate únicamente comprueba al arrancar que las
+    # clases del código encajan con las tablas; si no encajan, el servicio no arranca.
+    hibernate:
+      ddl-auto: validate
+    # La conexión a la base se usa solo mientras dura el caso de uso, no durante toda la
+    # petición web.
+    open-in-view: false
