@@ -4,13 +4,15 @@ import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
 import com.smartkash.identidad.cuenta.dominio.CorreoYaRegistrado;
 import com.smartkash.identidad.cuenta.dominio.Usuario;
 
+import java.util.Optional;
+
 /**
  * Lugar donde se guardan y se consultan las cuentas de usuario.
  *
- * <p>Qué es: un puerto. El caso de uso del registro solo sabe que puede preguntar si un
- * correo existe y pedir que se guarde una cuenta; no sabe que detrás hay una base de
- * datos. La clase que implemente esta interfaz hará el trabajo real contra la tabla de
- * usuarios.</p>
+ * <p>Qué es: un puerto. Los casos de uso solo saben que pueden preguntar si un correo
+ * existe, buscar una cuenta y pedir que se guarde una nueva; no saben que detrás hay una
+ * base de datos. La clase que implemente esta interfaz hará el trabajo real contra la
+ * tabla de usuarios.</p>
  */
 public interface RepositorioUsuarios {
 
@@ -21,6 +23,23 @@ public interface RepositorioUsuarios {
      * @return {@code true} si existe una cuenta con ese correo
      */
     boolean existeConCorreo(CorreoNormalizado correo);
+
+    /**
+     * Busca la cuenta registrada con ese correo y la devuelve completa, incluido el hash de
+     * su contraseña.
+     *
+     * <p>Para qué sirve: el inicio de sesión necesita el hash guardado para compararlo con
+     * la contraseña que escribe la persona, y el rol y el estado para decidir si puede
+     * entrar.</p>
+     *
+     * <p>Devuelve un {@link Optional}: una caja que puede venir con una cuenta dentro o
+     * vacía. Obliga a quien llama a decidir qué hacer cuando no hay cuenta, en lugar de
+     * recibir un {@code null} que se le pueda olvidar comprobar.</p>
+     *
+     * @param correo el correo ya normalizado; así no importan las mayúsculas con que se escribió
+     * @return la cuenta, o una caja vacía si nadie se registró con ese correo
+     */
+    Optional<Usuario> buscarPorCorreo(CorreoNormalizado correo);
 
     /**
      * Guarda una cuenta nueva.

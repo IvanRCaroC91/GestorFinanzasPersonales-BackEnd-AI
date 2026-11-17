@@ -274,6 +274,11 @@ class RegistrarUsuarioTest {
         }
 
         @Override
+        public Optional<Usuario> buscarPorCorreo(CorreoNormalizado correo) {
+            return guardados.stream().filter(usuario -> usuario.correo().equals(correo)).findFirst();
+        }
+
+        @Override
         public void guardar(Usuario usuario) {
             if (yaGuardado(usuario.correo())) {
                 throw new CorreoYaRegistrado();
