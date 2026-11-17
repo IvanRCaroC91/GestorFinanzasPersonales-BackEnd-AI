@@ -1,7 +1,6 @@
 package com.smartkash.identidad.cuenta.dominio;
 
-import com.smartkash.identidad.registro.dominio.ErrorDeRegistro;
-import com.smartkash.identidad.registro.dominio.ErrorDeRegistro.Motivo;
+import com.smartkash.identidad.cuenta.dominio.NombreNoValido.Motivo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -82,11 +81,10 @@ class UsuarioTest {
     @ValueSource(strings = {"   ", "\t"})
     @DisplayName("rechaza un nombre nulo, vacío o hecho solo de espacios")
     void rechazaNombreVacio(String nombre) {
-        ErrorDeRegistro error = assertThrows(ErrorDeRegistro.class,
+        NombreNoValido error = assertThrows(NombreNoValido.class,
                 () -> Usuario.nuevo(nombre, CORREO_ESCRITO, CORREO, HASH));
 
-        assertEquals(Motivo.NOMBRE_OBLIGATORIO, error.motivo());
-        assertEquals("nombre", error.campo());
+        assertEquals(Motivo.OBLIGATORIO, error.motivo());
     }
 
     @Test
@@ -98,11 +96,10 @@ class UsuarioTest {
     @Test
     @DisplayName("rechaza un nombre de 101 caracteres")
     void rechazaNombreDeCientoUnCaracteres() {
-        ErrorDeRegistro error = assertThrows(ErrorDeRegistro.class,
+        NombreNoValido error = assertThrows(NombreNoValido.class,
                 () -> Usuario.nuevo("a".repeat(101), CORREO_ESCRITO, CORREO, HASH));
 
-        assertEquals(Motivo.NOMBRE_MUY_LARGO, error.motivo());
-        assertEquals("nombre", error.campo());
+        assertEquals(Motivo.MUY_LARGO, error.motivo());
     }
 
     @Test

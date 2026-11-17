@@ -35,4 +35,23 @@ class ArquitecturaTest {
                             "org.springframework..", "jakarta.persistence..",
                             "com.fasterxml.jackson..")
                     .allowEmptyShould(true);
+
+    /**
+     * El paquete compartido de cuentas no puede depender de las funcionalidades que lo usan.
+     *
+     * <p>Por qué: {@code cuenta} reúne lo que comparten el registro, el inicio de sesión y
+     * la verificación del correo. La dependencia va en un solo sentido: ellas conocen a
+     * {@code cuenta}, pero {@code cuenta} no las conoce. Si las conociera, cambiar una
+     * funcionalidad podría romper las otras dos a través del paquete compartido, y ya no se
+     * podría entender ni probar cada una por separado.</p>
+     *
+     * <p>La regla revisa también las clases de prueba del paquete.</p>
+     */
+    @ArchTest
+    static final ArchRule cuenta_no_depende_de_las_funcionalidades =
+            noClasses().that().resideInAPackage("com.smartkash.identidad.cuenta..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "com.smartkash.identidad.registro..",
+                            "com.smartkash.identidad.sesion..",
+                            "com.smartkash.identidad.verificacion..");
 }

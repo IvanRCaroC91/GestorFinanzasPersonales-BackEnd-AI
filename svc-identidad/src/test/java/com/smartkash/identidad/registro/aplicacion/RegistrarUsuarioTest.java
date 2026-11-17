@@ -236,6 +236,33 @@ class RegistrarUsuarioTest {
         assertEquals(conCorreoNuevo.motivo(), conCorreoExistente.motivo());
     }
 
+    // ---------- Nombre ----------
+
+    @Test
+    @DisplayName("un nombre vacío se rechaza con el error del registro, su motivo y su campo")
+    void rechazaNombreVacioConElErrorDelRegistro() {
+        ErrorDeRegistro error = assertThrows(ErrorDeRegistro.class,
+                () -> registrarUsuario.ejecutar(datos("   ", "ana@correo.com", CONTRASENA_VALIDA)));
+
+        assertEquals(Motivo.NOMBRE_OBLIGATORIO, error.motivo());
+        assertEquals("nombre", error.campo());
+        assertEquals("El nombre es obligatorio.", error.getMessage());
+        assertEquals(0, usuarios.guardados.size());
+    }
+
+    @Test
+    @DisplayName("un nombre de 101 caracteres se rechaza con el error del registro, su motivo y su campo")
+    void rechazaNombreMuyLargoConElErrorDelRegistro() {
+        ErrorDeRegistro error = assertThrows(ErrorDeRegistro.class,
+                () -> registrarUsuario.ejecutar(
+                        datos("a".repeat(101), "ana@correo.com", CONTRASENA_VALIDA)));
+
+        assertEquals(Motivo.NOMBRE_MUY_LARGO, error.motivo());
+        assertEquals("nombre", error.campo());
+        assertEquals("El nombre no puede tener más de 100 caracteres.", error.getMessage());
+        assertEquals(0, usuarios.guardados.size());
+    }
+
     // ---------- Datos de entrada ----------
 
     @Test

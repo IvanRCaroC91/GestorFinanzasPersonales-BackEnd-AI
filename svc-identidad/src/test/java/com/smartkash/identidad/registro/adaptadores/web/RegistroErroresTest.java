@@ -146,6 +146,27 @@ class RegistroErroresTest {
                 .andExpect(jsonPath("$.errores[0].campo").value("versionPolitica"));
     }
 
+    /**
+     * Un nombre de 101 caracteres supera el máximo de 100. Pasa el tope holgado de la puerta
+     * (que solo frena tamaños desmesurados), así que quien lo rechaza es la regla del nombre.
+     * La respuesta señala el campo, explica el límite y lleva su motivo; no se crea la cuenta.
+     */
+    @Test
+    void nombre_demasiado_largo_responde_400_con_su_motivo() throws Exception {
+        String correo = correoAlAzar();
+
+        ResultActions respuesta =
+                registrar(cuerpo("a".repeat(101), correo, CONTRASENA_VALIDA, true, "1.0"));
+
+        esErrorDeValidacion(respuesta)
+                .andExpect(jsonPath("$.codigo").value("NOMBRE_MUY_LARGO"))
+                .andExpect(jsonPath("$.errores", hasSize(1)))
+                .andExpect(jsonPath("$.errores[0].campo").value("nombre"))
+                .andExpect(jsonPath("$.errores[0].mensaje")
+                        .value("El nombre no puede tener más de 100 caracteres."));
+        assertThat(cuentasCon(correo)).isZero();
+    }
+
     /** Si faltan campos obligatorios, la respuesta los lista todos de una vez. */
     @Test
     void campos_faltantes_se_listan_todos() throws Exception {
