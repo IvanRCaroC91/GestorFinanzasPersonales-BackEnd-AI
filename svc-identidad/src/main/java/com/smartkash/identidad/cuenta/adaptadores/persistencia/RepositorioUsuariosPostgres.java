@@ -8,7 +8,9 @@ import com.smartkash.identidad.cuenta.dominio.Usuario;
 import com.smartkash.identidad.cuenta.puertos.RepositorioUsuarios;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Guarda y consulta las cuentas de usuario en PostgreSQL.
@@ -102,5 +104,17 @@ class RepositorioUsuariosPostgres implements RepositorioUsuarios {
         if (insertadas == 0) {
             throw new CorreoYaRegistrado();
         }
+    }
+
+    /**
+     * Anota que la persona confirmó su correo: una cuenta pendiente pasa a activa y la fecha de
+     * verificación se anota la primera vez.
+     *
+     * @param usuarioId la cuenta
+     * @param ahora     momento de la verificación
+     */
+    @Override
+    public void marcarVerificada(UUID usuarioId, Instant ahora) {
+        tabla.marcarVerificada(usuarioId, ahora);
     }
 }

@@ -313,6 +313,11 @@ class RegistrarUsuarioTest {
             guardados.add(usuario);
         }
 
+        @Override
+        public void marcarVerificada(java.util.UUID usuarioId, Instant ahora) {
+            throw new UnsupportedOperationException("El registro no verifica cuentas.");
+        }
+
         private boolean yaGuardado(CorreoNormalizado correo) {
             return guardados.stream().anyMatch(usuario -> usuario.correo().equals(correo));
         }

@@ -37,16 +37,20 @@ class ArquitecturaTest {
                     .allowEmptyShould(true);
 
     /**
-     * El caso de uso del inicio de sesión tampoco depende de frameworks.
+     * Los casos de uso del inicio de sesión y de la verificación del correo tampoco dependen
+     * de frameworks.
      *
-     * <p>Por qué: coordina reglas de seguridad delicadas (bloqueos, comparación de
-     * contraseñas, emisión de tokens) y se prueba entero con puertos falsos, sin arrancar
-     * Spring. Spring lo crea desde fuera, con una clase de configuración en los
-     * adaptadores, sin que el caso de uso lo sepa.</p>
+     * <p>Por qué: coordinan reglas de seguridad delicadas (bloqueos, comparación de
+     * contraseñas, emisión y uso de tokens) y se prueban enteros con puertos falsos, sin
+     * arrancar Spring. Spring los crea desde fuera, con clases de configuración en los
+     * adaptadores, sin que los casos de uso lo sepan. Si necesitan una transacción, la piden a
+     * través de un puerto.</p>
      */
     @ArchTest
-    static final ArchRule aplicacion_de_la_sesion_no_depende_de_frameworks =
-            noClasses().that().resideInAPackage("com.smartkash.identidad.sesion.aplicacion..")
+    static final ArchRule casos_de_uso_de_sesion_y_verificacion_no_dependen_de_frameworks =
+            noClasses().that().resideInAnyPackage(
+                            "com.smartkash.identidad.sesion.aplicacion..",
+                            "com.smartkash.identidad.verificacion.aplicacion..")
                     .should().dependOnClassesThat().resideInAnyPackage(
                             "org.springframework..", "jakarta.persistence..",
                             "com.fasterxml.jackson..");

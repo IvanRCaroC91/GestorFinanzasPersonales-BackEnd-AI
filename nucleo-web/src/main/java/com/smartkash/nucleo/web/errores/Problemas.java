@@ -29,6 +29,7 @@ public final class Problemas {
     public static final String CODIGO = "codigo";
 
     private static final URI TIPO_VALIDACION = URI.create("/problemas/validacion");
+    private static final URI TIPO_REGLA_NEGOCIO = URI.create("/problemas/regla-negocio");
     private static final URI TIPO_NO_AUTENTICADO = URI.create("/problemas/no-autenticado");
     private static final URI TIPO_DEMASIADAS_SOLICITUDES = URI.create("/problemas/demasiadas-solicitudes");
     private static final URI TIPO_INTERNO = URI.create("/problemas/interno");
@@ -51,6 +52,26 @@ public final class Problemas {
         if (!errores.isEmpty()) {
             problema.setProperty(ERRORES, List.copyOf(errores));
         }
+        return problema;
+    }
+
+    /**
+     * Crea el error de una operación que incumple una regla de negocio, con código HTTP 400.
+     *
+     * <p>Se diferencia del error de validación en que los datos tienen buena forma, pero la
+     * operación no se puede hacer (por ejemplo, un enlace de verificación que ya se usó). El
+     * {@code codigo} dice qué regla se incumplió, para que la pantalla pueda reaccionar sin
+     * interpretar el texto.</p>
+     *
+     * @param detalle explicación para la persona
+     * @param codigo  identificador de la regla, en mayúsculas y con guiones bajos
+     * @return el error listo para devolverse
+     */
+    public static ProblemDetail reglaNegocio(String detalle, String codigo) {
+        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detalle);
+        problema.setType(TIPO_REGLA_NEGOCIO);
+        problema.setTitle("La operación incumple una regla de negocio");
+        problema.setProperty(CODIGO, codigo);
         return problema;
     }
 
