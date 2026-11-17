@@ -54,4 +54,20 @@ class ArquitecturaTest {
                             "com.smartkash.identidad.registro..",
                             "com.smartkash.identidad.sesion..",
                             "com.smartkash.identidad.verificacion..");
+
+    /**
+     * El paquete compartido de tokens tampoco puede depender de las funcionalidades que lo
+     * usan.
+     *
+     * <p>Por qué: generar valores aleatorios y calcular huellas lo necesitan tanto el inicio
+     * de sesión como la verificación del correo. Igual que con las cuentas, la dependencia
+     * va en un solo sentido.</p>
+     */
+    @ArchTest
+    static final ArchRule tokens_no_depende_de_las_funcionalidades =
+            noClasses().that().resideInAPackage("com.smartkash.identidad.tokens..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "com.smartkash.identidad.registro..",
+                            "com.smartkash.identidad.sesion..",
+                            "com.smartkash.identidad.verificacion..");
 }
