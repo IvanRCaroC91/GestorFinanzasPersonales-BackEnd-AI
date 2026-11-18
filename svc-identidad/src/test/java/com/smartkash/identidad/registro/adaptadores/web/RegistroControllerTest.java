@@ -1,5 +1,6 @@
 package com.smartkash.identidad.registro.adaptadores.web;
 
+import com.smartkash.identidad.PruebaConContenedores;
 import com.smartkash.identidad.registro.aplicacion.DatosDeRegistro;
 import com.smartkash.identidad.registro.aplicacion.RegistrarUsuario;
 import com.smartkash.identidad.registro.dominio.Autorizacion;
@@ -8,7 +9,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,9 +17,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -45,13 +42,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * <p>Necesita Docker abierto.</p>
  */
 @SpringBootTest
-@Testcontainers
-class RegistroControllerTest {
-
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:18").withInitScript("db/roles-de-prueba.sql");
+class RegistroControllerTest extends PruebaConContenedores {
 
     private static final String RUTA = "/api/v1/auth/registro";
     private static final String CONTRASENA = "una frase larga y dificil 2026";

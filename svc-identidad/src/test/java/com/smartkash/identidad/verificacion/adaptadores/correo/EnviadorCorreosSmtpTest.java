@@ -1,13 +1,9 @@
 package com.smartkash.identidad.verificacion.adaptadores.correo;
 
+import com.smartkash.identidad.PruebaConContenedores;
 import com.smartkash.identidad.verificacion.dominio.CorreoDeVerificacion;
 import org.junit.jupiter.api.Test;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -25,25 +21,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * Comprueba el envío del correo de verificación contra un servidor de correo de verdad.
  *
- * <p>Qué hace: arranca en Docker un Mailpit, un servidor de correo para desarrollo que acepta
+ * <p>Qué hace: usa el Mailpit en Docker que comparten las pruebas, un servidor de correo para desarrollo que acepta
  * todo lo que recibe y no lo entrega a nadie. El adaptador le envía el correo por SMTP, igual
  * que haría con un proveedor real, y la prueba lee lo que llegó a través de la API HTTP de
- * Mailpit. No arranca Spring.</p>
+ * Mailpit. No arranca Spring: de la clase base solo usa el Mailpit compartido.</p>
  *
  * <p>Necesita Docker abierto.</p>
  */
-@Testcontainers
-class EnviadorCorreosSmtpTest {
+class EnviadorCorreosSmtpTest extends PruebaConContenedores {
 
-    private static final int PUERTO_SMTP = 1025;
-    private static final int PUERTO_WEB = 8025;
     private static final String REMITENTE = "no-responder@pruebas.invalid";
     private static final JsonMapper JSON = JsonMapper.builder().build();
-
-    @Container
-    static final GenericContainer<?> MAILPIT = new GenericContainer<>(DockerImageName.parse("axllent/mailpit:v1.33.1"))
-            .withExposedPorts(PUERTO_SMTP, PUERTO_WEB)
-            .waitingFor(Wait.forHttp("/api/v1/messages").forPort(PUERTO_WEB));
 
     /**
      * El correo llega a su destinatario, desde el remitente configurado, con el asunto fijo y
@@ -108,7 +96,7 @@ class EnviadorCorreosSmtpTest {
 
     /* Busca en Mailpit el último mensaje enviado a ese destinatario y lo devuelve completo. */
     private static JsonNode mensajePara(String destinatario) throws Exception {
-        String base = "http://" + MAILPIT.getHost() + ":" + MAILPIT.getMappedPort(PUERTO_WEB) + "/api/v1/";
+        String base = apiDeMailpit();
         JsonNode lista = JSON.readTree(obtener(base + "messages"));
         for (JsonNode resumen : lista.get("messages")) {
             if (destinatario.equals(resumen.get("To").get(0).get("Address").asString())) {

@@ -1,5 +1,7 @@
 package com.smartkash.identidad.registro.adaptadores.persistencia;
 
+import com.smartkash.identidad.PruebaConContenedores;
+
 import com.smartkash.identidad.registro.dominio.Autorizacion;
 import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
 import com.smartkash.identidad.cuenta.dominio.CorreoYaRegistrado;
@@ -11,14 +13,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -32,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Comprueba que los adaptadores de persistencia del registro guardan y leen bien en un
  * PostgreSQL real.
  *
- * <p>Qué hace: arranca un PostgreSQL desechable dentro de Docker, deja que Flyway cree las
+ * <p>Qué hace: usa el PostgreSQL desechable en Docker que comparten las pruebas, deja que Flyway cree las
  * tablas y usa los tres repositorios tal como los usará el caso de uso del registro. Después
  * mira directamente en las tablas, con SQL, para confirmar qué quedó guardado.</p>
  *
@@ -43,13 +41,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <p>Necesita Docker abierto.</p>
  */
 @SpringBootTest
-@Testcontainers
-class PersistenciaDelRegistroTest {
-
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:18").withInitScript("db/roles-de-prueba.sql");
+class PersistenciaDelRegistroTest extends PruebaConContenedores {
 
     /* Un valor cualquiera con forma de hash; aquí no se calcula ninguno de verdad. */
     private static final String HASH = "$argon2id$v=19$m=1,t=1,p=1$c2FsdGRlcHJ1ZWJh$aGFzaGRlcHJ1ZWJh";

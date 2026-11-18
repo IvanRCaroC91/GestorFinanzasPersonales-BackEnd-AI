@@ -1,5 +1,7 @@
 package com.smartkash.identidad.verificacion.adaptadores;
 
+import com.smartkash.identidad.PruebaConContenedores;
+
 import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
 import com.smartkash.identidad.cuenta.dominio.Usuario;
 import com.smartkash.identidad.cuenta.puertos.RepositorioUsuarios;
@@ -15,7 +17,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -26,9 +27,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -66,19 +64,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * Comprueba la verificación del correo con PostgreSQL real: el repositorio de tokens, la
  * activación de la cuenta, la transacción que las une y la ruta web.
  *
- * <p>Qué hace: arranca el servicio completo con un PostgreSQL desechable. Cada prueba crea su
+ * <p>Qué hace: arranca el servicio completo con el PostgreSQL desechable que comparten las pruebas. Cada prueba crea su
  * propia cuenta y sus propios tokens. Las peticiones web pasan por la cadena de filtros real.</p>
  *
  * <p>Necesita Docker abierto.</p>
  */
 @SpringBootTest
-@Testcontainers
-class VerificacionDelCorreoTest {
-
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:18").withInitScript("db/roles-de-prueba.sql");
+class VerificacionDelCorreoTest extends PruebaConContenedores {
 
     private static final String RUTA = "/api/v1/auth/verificacion-correo";
     private static final String RUTA_REENVIO = "/api/v1/auth/verificacion-correo/reenvio";

@@ -4,20 +4,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -50,32 +41,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * <p>Necesita Docker abierto.</p>
  */
 @SpringBootTest
-@Testcontainers
-class RecorridoCompletoTest {
-
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:18").withInitScript("db/roles-de-prueba.sql");
-
-    private static final int PUERTO_SMTP = 1025;
-    private static final int PUERTO_WEB = 8025;
-
-    @Container
-    static final GenericContainer<?> MAILPIT = new GenericContainer<>(DockerImageName.parse("axllent/mailpit:v1.33.1"))
-            .withExposedPorts(PUERTO_SMTP, PUERTO_WEB)
-            .waitingFor(Wait.forHttp("/api/v1/messages").forPort(PUERTO_WEB));
+class RecorridoCompletoTest extends PruebaConContenedores {
 
     private static final String CONTRASENA = "una frase larga y dificil 2026";
     private static final Pattern TOKEN_EN_EL_ENLACE = Pattern.compile("/verificar-correo#token=([A-Za-z0-9_-]+)");
     private static final JsonMapper JSON = JsonMapper.builder().build();
-
-    /** El servicio envía los correos al Mailpit de esta prueba. */
-    @DynamicPropertySource
-    static void servidorDeCorreo(DynamicPropertyRegistry registro) {
-        registro.add("spring.mail.host", MAILPIT::getHost);
-        registro.add("spring.mail.port", () -> MAILPIT.getMappedPort(PUERTO_SMTP));
-    }
 
     @Autowired
     private WebApplicationContext contexto;
@@ -195,7 +165,7 @@ class RecorridoCompletoTest {
 
     /* Texto de cada correo recibido por la persona, leído de la API de Mailpit. */
     private List<String> enlacesRecibidos() throws Exception {
-        String base = "http://" + MAILPIT.getHost() + ":" + MAILPIT.getMappedPort(PUERTO_WEB) + "/api/v1/";
+        String base = apiDeMailpit();
         List<String> textos = new ArrayList<>();
         for (JsonNode resumen : JSON.readTree(obtener(base + "messages")).get("messages")) {
             if (correo.equals(resumen.get("To").get(0).get("Address").asString())) {

@@ -1,5 +1,7 @@
 package com.smartkash.identidad.sesion.adaptadores.persistencia;
 
+import com.smartkash.identidad.PruebaConContenedores;
+
 import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
 import com.smartkash.identidad.cuenta.dominio.Usuario;
 import com.smartkash.identidad.cuenta.puertos.RepositorioUsuarios;
@@ -12,11 +14,9 @@ import com.smartkash.identidad.sesion.puertos.RepositorioTokensRenovacion;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.security.SecureRandom;
 import java.sql.Timestamp;
@@ -39,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Comprueba que los contadores de bloqueo y los tokens de renovación se guardan y se leen
  * bien en un PostgreSQL real, también cuando llegan varios fallos a la vez.
  *
- * <p>Qué hace: arranca un PostgreSQL desechable dentro de Docker, deja que Flyway cree las
+ * <p>Qué hace: usa el PostgreSQL desechable en Docker que comparten las pruebas, deja que Flyway cree las
  * tablas y usa los dos repositorios tal como los usará el caso de uso de inicio de sesión.
  * Después mira directamente en las tablas, con SQL, para confirmar qué quedó guardado.</p>
  *
@@ -54,13 +54,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Necesita Docker abierto.</p>
  */
 @SpringBootTest
-@Testcontainers
-class PersistenciaDeLaSesionTest {
-
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:18").withInitScript("db/roles-de-prueba.sql");
+class PersistenciaDeLaSesionTest extends PruebaConContenedores {
 
     private static final Instant AHORA = Instant.parse("2026-11-17T10:00:00Z");
 
@@ -85,6 +79,9 @@ class PersistenciaDeLaSesionTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private PlatformTransactionManager gestorDeTransacciones;
 
     // ---------- Contadores de bloqueo ----------
 
@@ -249,9 +246,23 @@ class PersistenciaDeLaSesionTest {
      * <p>La regla: una cuenta tiene una política pendiente si se publicó una versión que cambia
      * la finalidad y la cuenta no ha aceptado ni esa versión ni otra publicada después. Una
      * política con fecha futura todavía no cuenta.</p>
+     *
+     * <p>Limpieza: la base de datos es común a todas las pruebas de la ejecución, y una política
+     * publicada afecta a todas (al registro, que exige la versión vigente, y al inicio de
+     * sesión). Por eso el recorrido entero ocurre dentro de una transacción que se deshace al
+     * terminar, pase o falle: las políticas, cuentas y autorizaciones que crea no llegan a
+     * quedar guardadas para nadie más.</p>
      */
     @Test
     void decide_si_hay_una_politica_pendiente() {
+        TransactionTemplate deshacerAlTerminar = new TransactionTemplate(gestorDeTransacciones);
+        deshacerAlTerminar.executeWithoutResult(estado -> {
+            estado.setRollbackOnly();
+            recorridoDePoliticas();
+        });
+    }
+
+    private void recorridoDePoliticas() {
         Usuario ana = cuentaGuardada();
         Usuario luis = cuentaGuardada();
         aceptar(ana, "1.0", true);
