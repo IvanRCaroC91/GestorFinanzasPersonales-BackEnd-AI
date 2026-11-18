@@ -24,6 +24,9 @@ import java.util.Map;
  * archivo temporal y se pasa su ruta como si viniera de la variable de entorno. Se genera una
  * sola vez por ejecución, porque generarla tarda un momento.</p>
  *
+ * <p>Descubrimiento: el cliente de Eureka queda desactivado, así que las pruebas no intentan
+ * registrarse en ningún servidor (lo comprueba {@code DescubrimientoEnPruebasTest}).</p>
+ *
  * <p>Correo: apunta a un puerto de este equipo donde no escucha nadie. Ninguna prueba debe
  * enviar correos reales; la que prueba el envío usa su propio servidor de correo de pruebas.</p>
  */
@@ -50,7 +53,10 @@ public class EntornoDePruebas
                 "identidad.token.clave-firma-ruta", archivoDeClave().toString(),
                 "identidad.token.emisor", EMISOR,
                 "identidad.correo.remitente", REMITENTE,
-                "identidad.verificacion.direccion-base", "https://app.pruebas.invalid"));
+                "identidad.verificacion.direccion-base", "https://app.pruebas.invalid",
+                // Sin cliente de Eureka: en las pruebas no hay servidor de descubrimiento y el
+                // servicio no debe intentar registrarse en ninguno.
+                "eureka.client.enabled", "false"));
 
         // El servidor de correo solo se fija si la prueba no indicó otro. Así la prueba de
         // recorrido completo puede apuntar a su propio servidor de correo de pruebas.
