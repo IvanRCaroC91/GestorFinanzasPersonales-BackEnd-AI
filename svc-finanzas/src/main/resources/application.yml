@@ -1,0 +1,19 @@
+server:
+  # finanzas queda en 8082
+  port: ${FINANZAS_PUERTO:8082}
+
+spring:
+  application:
+    # Nombre con el que el servicio se anota en Eureka. El gateway lo buscará por este nombre.
+    name: svc-finanzas
+  threads:
+    virtual:
+      enabled: true
+
+# Registro en el servidor de descubrimiento (Eureka). El usuario y la contraseña no tienen
+# valor por defecto y llegan por variables de entorno. Si Eureka no responde, el servicio
+# arranca igualmente y reintenta en segundo plano.
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_USUARIO}:${EUREKA_CONTRASENA}@${EUREKA_HOST:localhost}:8761/eureka/
