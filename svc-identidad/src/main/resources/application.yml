@@ -54,6 +54,18 @@ spring:
       mail.smtp.timeout: 5000
       mail.smtp.writetimeout: 5000
 
+# Registro en el servidor de descubrimiento (Eureka). Al arrancar, el servicio se anota con su
+# nombre (spring.application.name) y avisa periódicamente de que sigue vivo; el gateway lo
+# buscará por ese nombre. El usuario y la contraseña no tienen valor por defecto y llegan por
+# variables de entorno; solo el equipo donde corre Eureka tiene un valor por defecto (este mismo).
+#
+# Si Eureka no responde, el servicio arranca igualmente y atiende peticiones: el cliente lo
+# deja escrito en el log y lo reintenta en segundo plano hasta que Eureka vuelve.
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_USUARIO}:${EUREKA_CONTRASENA}@${EUREKA_HOST:localhost}:8761/eureka/
+
 identidad:
   # Correos que envía el servicio. Sin remitente el servicio no arranca.
   correo:

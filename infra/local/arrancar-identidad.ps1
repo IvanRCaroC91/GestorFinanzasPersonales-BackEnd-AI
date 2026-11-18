@@ -4,9 +4,13 @@
 #
 # Que hace:
 #   1. Lee el archivo .env de la raiz del repositorio.
-#   2. Pone las variables IDENTIDAD_* solo en esta ventana de PowerShell (no quedan
-#      guardadas en el sistema).
+#   2. Pone las variables IDENTIDAD_* y EUREKA_* solo en esta ventana de PowerShell (no
+#      quedan guardadas en el sistema). Las EUREKA_* son las credenciales con las que el
+#      servicio se registra en el servidor de descubrimiento.
 #   3. Empaqueta el servicio sin ejecutar las pruebas y lo arranca en el puerto 8080.
+#
+# Si Eureka no esta arrancado, el servicio arranca igualmente: escribe avisos en el log y
+# reintenta el registro en segundo plano.
 #
 # Uso, desde la raiz del repositorio:   ./infra/local/arrancar-identidad.ps1
 # Para detener el servicio:             Ctrl + C
@@ -34,7 +38,7 @@ foreach ($linea in Get-Content $archivoEnv -Encoding UTF8) {
     $nombre = $texto.Substring(0, $separador).Trim()
     $valor = $texto.Substring($separador + 1).Trim()
 
-    if ($nombre -like 'IDENTIDAD_*') {
+    if ($nombre -like 'IDENTIDAD_*' -or $nombre -like 'EUREKA_*') {
         if ($valor -eq 'cambiar-esto' -or $valor -eq '') {
             Write-Error "La variable $nombre de .env sigue sin un valor propio."
         }

@@ -1,0 +1,35 @@
+server:
+  # Puerto estándar de Eureka.
+  port: 8761
+  # Escucha solo en la máquina local, no en la red. Así nadie desde fuera del equipo puede
+  # alcanzar el registro de servicios, aunque tenga las credenciales. En Docker habrá que
+  # cambiarlo, porque dentro de un contenedor 127.0.0.1 no es alcanzable desde otros contenedores.
+  address: 127.0.0.1
+
+spring:
+  application:
+    # Nombre con el que este servicio se conoce a sí mismo.
+    name: eureka
+
+  # Credenciales con las que los demás servicios se registran y consultan. Llegan por variables
+  # de entorno y no tienen valor por defecto: si falta alguna, el servicio no arranca y el error
+  # nombra la variable. Así no hay contraseñas escritas en el repositorio ni un valor «de fábrica»
+  # que alguien olvide cambiar.
+  security:
+    user:
+      name: ${EUREKA_USUARIO}
+      password: ${EUREKA_CONTRASENA}
+
+eureka:
+  client:
+    # Este servidor no se anota a sí mismo en el registro. Eureka está pensado para funcionar en
+    # parejas y, por defecto, intenta registrarse en otro Eureka; con una sola instancia eso solo
+    # produciría errores en el log.
+    register-with-eureka: false
+    # Tampoco descarga la lista de servicios de otro Eureka: él mismo es la fuente.
+    fetch-registry: false
+
+  # Desactiva el panel web de Eureka. El análisis pide que esté desactivado o protegido; aquí se
+  # hacen las dos cosas, porque además toda ruta exige credenciales.
+  dashboard:
+    enabled: false

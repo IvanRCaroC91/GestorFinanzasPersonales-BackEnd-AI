@@ -20,11 +20,12 @@
         <module>nucleo-financiero</module>
         <module>nucleo-web</module>
         <module>svc-identidad</module>
+        <module>eureka</module>
     </modules>
 
     <properties>
         <java.version>25</java.version>
-        <spring-cloud.version>2025.1.2</spring-cloud.version>
+        <spring-cloud.version>2025.1.4</spring-cloud.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
