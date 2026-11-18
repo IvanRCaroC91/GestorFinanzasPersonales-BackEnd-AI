@@ -1,5 +1,7 @@
 package com.smartkash.identidad.cuenta.adaptadores.persistencia;
 
+import com.smartkash.identidad.PruebaConContenedores;
+
 import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
 import com.smartkash.identidad.cuenta.dominio.EstadoCuenta;
 import com.smartkash.identidad.cuenta.dominio.Rol;
@@ -8,11 +10,7 @@ import com.smartkash.identidad.cuenta.puertos.RepositorioUsuarios;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -25,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Comprueba que el repositorio de usuarios encuentra una cuenta por su correo y la devuelve
  * completa, leyendo de un PostgreSQL real.
  *
- * <p>Qué hace: arranca un PostgreSQL desechable dentro de Docker, deja que Flyway cree las
+ * <p>Qué hace: usa el PostgreSQL desechable en Docker que comparten las pruebas, deja que Flyway cree las
  * tablas, guarda cuentas con el propio repositorio y las vuelve a leer. Es la consulta que
  * usará el inicio de sesión para comparar la contraseña con el hash guardado.</p>
  *
@@ -36,13 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Necesita Docker abierto.</p>
  */
 @SpringBootTest
-@Testcontainers
-class BusquedaDeCuentasTest {
-
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:18").withInitScript("db/roles-de-prueba.sql");
+class BusquedaDeCuentasTest extends PruebaConContenedores {
 
     /* Un valor cualquiera con forma de hash; aquí no se calcula ninguno de verdad. */
     private static final String HASH = "$argon2id$v=19$m=1,t=1,p=1$c2FsdGRlcHJ1ZWJh$aGFzaGRlcHJ1ZWJh";

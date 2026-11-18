@@ -3,11 +3,7 @@ package com.smartkash.identidad;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.util.List;
 
@@ -16,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Comprueba que las migraciones dejan la base de datos lista para el registro de usuarios.
  *
- * <p>Qué hace: arranca un PostgreSQL real y desechable dentro de Docker, levanta el servicio
+ * <p>Qué hace: usa el PostgreSQL real y desechable en Docker que comparten las pruebas, levanta el servicio
  * contra él y deja que Flyway aplique los archivos SQL de {@code db/migration}. Después
  * pregunta a la base de datos si quedó como se espera.</p>
  *
@@ -26,8 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Necesita Docker abierto. Si Docker no está disponible, la prueba falla al arrancar.</p>
  */
 @SpringBootTest
-@Testcontainers
-class MigracionesTest {
+class MigracionesTest extends PruebaConContenedores {
 
     /*
      * El contenedor es estático para que se arranque una sola vez para toda la clase.
@@ -35,11 +30,6 @@ class MigracionesTest {
      * la dirección, el usuario ni la contraseña en ningún archivo.
      * El script inicial crea el rol de la aplicación, que la primera migración da por existente.
      */
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:18").withInitScript("db/roles-de-prueba.sql");
-
     @Autowired
     private JdbcTemplate jdbc;
 

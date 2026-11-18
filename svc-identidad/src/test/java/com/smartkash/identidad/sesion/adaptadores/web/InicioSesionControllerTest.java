@@ -1,5 +1,7 @@
 package com.smartkash.identidad.sesion.adaptadores.web;
 
+import com.smartkash.identidad.PruebaConContenedores;
+
 import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
 import com.smartkash.identidad.cuenta.dominio.Usuario;
 import com.smartkash.identidad.cuenta.puertos.HasheadorContrasena;
@@ -9,7 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -19,9 +20,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -46,7 +44,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * Comprueba la ruta de inicio de sesión de punta a punta: petición HTTP, filtros de seguridad,
  * caso de uso, PostgreSQL real y respuesta.
  *
- * <p>Qué hace: arranca el servicio completo con un PostgreSQL desechable, crea una cuenta con
+ * <p>Qué hace: arranca el servicio completo con el PostgreSQL desechable que comparten las pruebas, crea una cuenta con
  * una contraseña conocida y la usa para iniciar sesión. Las peticiones pasan por la cadena de
  * filtros real ({@code springSecurity()}), así que también se comprueba que la ruta es
  * pública.</p>
@@ -57,13 +55,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * <p>Necesita Docker abierto.</p>
  */
 @SpringBootTest
-@Testcontainers
-class InicioSesionControllerTest {
-
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:18").withInitScript("db/roles-de-prueba.sql");
+class InicioSesionControllerTest extends PruebaConContenedores {
 
     private static final String RUTA = "/api/v1/auth/inicio-sesion";
     private static final String CONTRASENA = "una frase larga y dificil 2026";
