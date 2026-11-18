@@ -20,6 +20,7 @@
         <module>nucleo-financiero</module>
         <module>nucleo-web</module>
         <module>svc-identidad</module>
+        <module>svc-finanzas</module>
         <module>eureka</module>
     </modules>
 
