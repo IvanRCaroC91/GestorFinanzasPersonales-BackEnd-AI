@@ -4,7 +4,9 @@ import com.smartkash.identidad.PruebaConContenedores;
 
 import com.smartkash.identidad.cuenta.dominio.CorreoNormalizado;
 import com.smartkash.identidad.cuenta.dominio.Usuario;
+import com.smartkash.identidad.cuenta.adaptadores.web.ManejadorErroresDeSaturacion;
 import com.smartkash.identidad.cuenta.puertos.HasheadorContrasena;
+import com.smartkash.identidad.cuenta.puertos.HasheadorSaturado;
 import com.smartkash.identidad.cuenta.puertos.RepositorioUsuarios;
 import com.smartkash.identidad.sesion.puertos.ConsultaDePoliticas;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +38,9 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
@@ -67,7 +71,8 @@ class InicioSesionControllerTest extends PruebaConContenedores {
     @Autowired
     private RepositorioUsuarios usuarios;
 
-    @Autowired
+    /* El hasheador real, salvo en la prueba que le pide responder que está saturado. */
+    @MockitoSpyBean
     private HasheadorContrasena hasheador;
 
     @Autowired
@@ -222,6 +227,26 @@ class InicioSesionControllerTest extends PruebaConContenedores {
         assertThat(respuesta.getContentAsString(StandardCharsets.UTF_8))
                 .contains("\"type\":\"/problemas/demasiadas-solicitudes\"")
                 .contains("\"status\":429");
+    }
+
+    /**
+     * Si el servicio está saturado de cálculos de contraseñas, responde 429 con
+     * {@code Retry-After} y no emite sesión. Tampoco cuenta como intento fallido: la persona
+     * no se equivocó de contraseña, y no debe acercarse a un bloqueo por culpa del servidor.
+     */
+    @Test
+    void con_el_calculo_de_hashes_saturado_responde_429_sin_contar_fallo() throws Exception {
+        doThrow(new HasheadorSaturado()).when(hasheador).coincide(anyString(), anyString());
+
+        MockHttpServletResponse respuesta = iniciar(cuerpo(cuenta.correoOriginal(), CONTRASENA));
+
+        assertThat(respuesta.getStatus()).isEqualTo(429);
+        assertThat(respuesta.getHeader("Retry-After")).isEqualTo("1");
+        assertThat(respuesta.getHeader("Set-Cookie")).isNull();
+        assertThat(respuesta.getContentAsString(StandardCharsets.UTF_8))
+                .contains("\"type\":\"/problemas/demasiadas-solicitudes\"")
+                .contains(ManejadorErroresDeSaturacion.DETALLE);
+        assertThat(contadorDe("IP:" + ip)).isZero();
     }
 
     // ---------- Dirección IP ----------

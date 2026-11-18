@@ -3,7 +3,9 @@ package com.smartkash.identidad.registro.adaptadores.web;
 import com.smartkash.identidad.PruebaConContenedores;
 
 import com.smartkash.identidad.registro.dominio.Autorizacion;
+import com.smartkash.identidad.cuenta.adaptadores.web.ManejadorErroresDeSaturacion;
 import com.smartkash.identidad.cuenta.puertos.HasheadorContrasena;
+import com.smartkash.identidad.cuenta.puertos.HasheadorSaturado;
 import com.smartkash.identidad.registro.puertos.RepositorioAutorizaciones;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -286,6 +289,24 @@ class RegistroErroresTest extends PruebaConContenedores {
                 .doesNotContain(CONTRASENA_VALIDA)
                 .doesNotContain(contrasenaDebil)
                 .doesNotContain(marcaCorreo);
+    }
+
+    /**
+     * Si el servicio está saturado de cálculos de contraseñas, el registro responde 429 con
+     * {@code Retry-After} y el error estándar de demasiadas solicitudes, y no crea la cuenta.
+     */
+    @Test
+    void con_el_calculo_de_hashes_saturado_responde_429() throws Exception {
+        doThrow(new HasheadorSaturado()).when(hasheador).hashear(anyString());
+        String correo = correoAlAzar();
+
+        registrar(cuerpo("Ana", correo, CONTRASENA_VALIDA, true, "1.0"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", "1"))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("/problemas/demasiadas-solicitudes"))
+                .andExpect(jsonPath("$.detail").value(ManejadorErroresDeSaturacion.DETALLE));
+        assertThat(cuentasCon(correo)).isZero();
     }
 
     /* Comprueba lo que comparten todos los errores de datos de entrada. */
