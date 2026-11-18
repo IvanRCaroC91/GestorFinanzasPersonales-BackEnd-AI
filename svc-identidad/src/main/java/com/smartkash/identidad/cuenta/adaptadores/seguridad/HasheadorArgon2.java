@@ -2,7 +2,6 @@ package com.smartkash.identidad.cuenta.adaptadores.seguridad;
 
 import com.smartkash.identidad.cuenta.puertos.HasheadorContrasena;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
-import org.springframework.stereotype.Component;
 
 /**
  * Calcula el hash de las contraseñas con el algoritmo Argon2id.
@@ -26,7 +25,6 @@ import org.springframework.stereotype.Component;
  * referencia en seguridad de aplicaciones). Si algún día se suben, los hashes ya guardados
  * siguen siendo verificables porque cada uno recuerda con qué parámetros se calculó.</p>
  */
-@Component
 class HasheadorArgon2 implements HasheadorContrasena {
 
     /** Tamaño de la sal, en bytes. */
