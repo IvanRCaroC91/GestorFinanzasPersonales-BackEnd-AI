@@ -21,6 +21,7 @@ import org.springframework.security.oauth2.server.resource.web.DefaultBearerToke
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.savedrequest.NullRequestCache;
+import org.springframework.security.web.session.DisableEncodeUrlFilter;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.servlet.HandlerExceptionResolver;
@@ -50,6 +51,8 @@ import static org.springframework.security.web.servlet.util.matcher.PathPatternR
  *       con {@code SameSite=Strict}, que impide que otra web la envíe.</li>
  *   <li><b>Sin formulario de inicio de sesión ni autenticación básica:</b> el único modo de
  *       autenticarse es el token.</li>
+ *   <li><b>Tope de tamaño del cuerpo:</b> el primer filtro de la cadena rechaza los cuerpos de
+ *       más de {@link #TAMANO_MAXIMO_DEL_CUERPO} bytes (ver {@link TopeDelCuerpo}).</li>
  * </ul>
  *
  * <p>{@code @EnableWebSecurity} activa Spring Security con esta configuración. Spring Boot ya
@@ -66,6 +69,13 @@ class ConfiguracionDeSeguridad {
             pathPattern(HttpMethod.POST, "/api/v1/auth/inicio-sesion"),
             pathPattern(HttpMethod.POST, "/api/v1/auth/verificacion-correo"),
             pathPattern(HttpMethod.GET, "/.well-known/jwks.json"));
+
+    /**
+     * Mayor tamaño de cuerpo admitido: 16 KiB. El mayor cuerpo válido del servicio (el del
+     * registro, con todos los campos al máximo) mide menos de 2 KiB; el margen evita rechazar
+     * por error cuerpos válidos con caracteres que ocupan varios bytes.
+     */
+    static final int TAMANO_MAXIMO_DEL_CUERPO = 16 * 1024;
 
     /**
      * Crea el validador de tokens de acceso.
@@ -113,6 +123,8 @@ class ConfiguracionDeSeguridad {
                 (peticion, respuesta, error) -> resolutor.resolveException(peticion, respuesta, null, error);
 
         http
+                // Lo primero: rechazar cuerpos demasiado grandes, antes incluso de mirar el token.
+                .addFilterBefore(new TopeDelCuerpo(TAMANO_MAXIMO_DEL_CUERPO, resolutor), DisableEncodeUrlFilter.class)
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)

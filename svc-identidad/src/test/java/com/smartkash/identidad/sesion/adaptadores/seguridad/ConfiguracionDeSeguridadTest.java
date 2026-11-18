@@ -281,6 +281,45 @@ class ConfiguracionDeSeguridadTest {
         assertThat(resultado.getResponse().getHeaders("Set-Cookie")).isEmpty();
     }
 
+    // ---------- Tamaño del cuerpo ----------
+
+    /**
+     * Un cuerpo de más de 16 KiB se rechaza con el error de validación estándar, sin llegar al
+     * controlador. Se prueba en una ruta pública para que nada más pueda rechazarlo.
+     */
+    @Test
+    void un_cuerpo_demasiado_grande_responde_400_en_formato_estandar() throws Exception {
+        MockHttpServletResponse respuesta = pedir(post("/api/v1/auth/registro")
+                .contentType("application/json").content(new byte[16 * 1024 + 1]));
+
+        assertThat(respuesta.getStatus()).isEqualTo(400);
+        assertThat(respuesta.getContentType()).startsWith("application/problem+json");
+        assertThat(respuesta.getContentAsString(StandardCharsets.UTF_8))
+                .contains("\"type\":\"/problemas/validacion\"")
+                .contains(TopeDelCuerpo.DETALLE)
+                .doesNotContain("ok");
+    }
+
+    /** Un cuerpo de exactamente 16 KiB todavía se acepta. */
+    @Test
+    void un_cuerpo_de_16_kib_se_acepta() throws Exception {
+        assertThat(pedir(post("/api/v1/auth/registro")
+                .contentType("application/json").content(new byte[16 * 1024])).getStatus()).isEqualTo(200);
+    }
+
+    /**
+     * El tamaño se mira antes que el token: un cuerpo enorme hacia una ruta protegida se
+     * rechaza por su tamaño sin gastar tiempo en comprobar ninguna firma.
+     */
+    @Test
+    void el_tamano_se_comprueba_antes_que_el_token() throws Exception {
+        MockHttpServletResponse respuesta = pedir(post(RUTA_PROTEGIDA)
+                .contentType("application/json").content(new byte[16 * 1024 + 1]));
+
+        assertThat(respuesta.getStatus()).isEqualTo(400);
+        assertThat(respuesta.getContentAsString(StandardCharsets.UTF_8)).contains(TopeDelCuerpo.DETALLE);
+    }
+
     // ---------- Ayudas ----------
 
     private MockHttpServletResponse pedir(RequestBuilder peticion) throws Exception {
