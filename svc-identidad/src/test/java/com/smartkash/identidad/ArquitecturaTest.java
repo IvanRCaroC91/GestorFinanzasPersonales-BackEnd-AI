@@ -37,8 +37,10 @@ class ArquitecturaTest {
                     .allowEmptyShould(true);
 
     /**
-     * Los casos de uso del inicio de sesión y de la verificación del correo tampoco dependen
-     * de frameworks.
+     * Los casos de uso del inicio de sesión, de la verificación del correo y de la limpieza de
+     * datos caducados tampoco dependen de frameworks. En la limpieza, el caso de uso decide
+     * cuánto tiempo se conserva cada dato; que esa regla sea Java puro permite probarla con un
+     * reloj parado.
      *
      * <p>Por qué: coordinan reglas de seguridad delicadas (bloqueos, comparación de
      * contraseñas, emisión y uso de tokens) y se prueban enteros con puertos falsos, sin
@@ -50,7 +52,8 @@ class ArquitecturaTest {
     static final ArchRule casos_de_uso_de_sesion_y_verificacion_no_dependen_de_frameworks =
             noClasses().that().resideInAnyPackage(
                             "com.smartkash.identidad.sesion.aplicacion..",
-                            "com.smartkash.identidad.verificacion.aplicacion..")
+                            "com.smartkash.identidad.verificacion.aplicacion..",
+                            "com.smartkash.identidad.limpieza.aplicacion..")
                     .should().dependOnClassesThat().resideInAnyPackage(
                             "org.springframework..", "jakarta.persistence..",
                             "com.fasterxml.jackson..");
