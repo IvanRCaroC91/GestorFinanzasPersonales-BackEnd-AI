@@ -1,5 +1,5 @@
 server:
-  # finanzas queda en 8082
+  # Puerto propio del servicio. Se puede cambiar con una variable.
   port: ${FINANZAS_PUERTO:8082}
 
 spring:
@@ -10,8 +10,34 @@ spring:
     virtual:
       enabled: true
 
-# Registro en el servidor de descubrimiento (Eureka). El usuario y la contraseña no tienen
-# valor por defecto y llegan por variables de entorno. Si Eureka no responde, el servicio
+  # Conexión a la base de datos del servicio. Ningún valor se escribe aquí: todos llegan por
+  # variables de entorno, para que no haya direcciones ni contraseñas en el repositorio.
+  # El servicio trabaja con un usuario de permisos limitados (leer y escribir datos).
+  datasource:
+    url: ${FINANZAS_BD_URL}
+    username: ${FINANZAS_BD_USUARIO}
+    password: ${FINANZAS_BD_CONTRASENA}
+
+  # Flyway aplica las migraciones al arrancar con otro usuario, el dueño del esquema, que es
+  # el único que puede crear o cambiar tablas.
+  flyway:
+    user: ${FINANZAS_BD_MIGRADOR_USUARIO}
+    password: ${FINANZAS_BD_MIGRADOR_CONTRASENA}
+
+  # Una petición con campos que el servicio no espera se rechaza en lugar de ignorarlos.
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+
+  jpa:
+    # Las tablas las crea solo Flyway. Hibernate únicamente comprueba al arrancar que las
+    # clases del código encajan con las tablas; si no encajan, el servicio no arranca.
+    hibernate:
+      ddl-auto: validate
+    # La conexión a la base se usa solo mientras dura el caso de uso, no toda la petición.
+    open-in-view: false
+
+# Registro en el servidor de descubrimiento (Eureka). Si Eureka no responde, el servicio
 # arranca igualmente y reintenta en segundo plano.
 eureka:
   client:
