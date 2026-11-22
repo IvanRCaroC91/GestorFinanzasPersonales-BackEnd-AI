@@ -16,7 +16,7 @@ import java.util.UUID;
  * el nombre se guarda sin espacios al inicio ni al final y tiene entre 1 y {@value #LARGO_MAXIMO_DEL_NOMBRE} caracteres.
  * El saldo inicial puede ser negativo, porque una cuenta corriente puede estar en descubierto.
  *
- * El importe es un {@link BigDecimal}, nunca un{@code double}:
+ * El importe es un {@link BigDecimal}, nunca un {@code double}:
  * los decimales binarios no representan bien los céntimos.</p>
  *
  * <p>Esta clase no sabe nada de la base de datos ni de la web</p>
@@ -41,7 +41,8 @@ public record Cuenta(
         boolean predeterminada,
         boolean archivada){
 
-    public static final int LARGO_MAXIMO_DEL_NOMBRE = 60; // Mayor largo admitido para el nombre
+    /** Mayor largo admitido para el nombre; coincide con la columna de la tabla. */
+    public static final int LARGO_MAXIMO_DEL_NOMBRE = 60;
 
     /**
      * Validacion de los datos al crear la cuenta.

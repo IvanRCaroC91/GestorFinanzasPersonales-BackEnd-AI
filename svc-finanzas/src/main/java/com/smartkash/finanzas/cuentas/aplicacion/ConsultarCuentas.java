@@ -22,10 +22,11 @@ public class ConsultarCuentas {
     private final RepositorioCuentas cuentas;
 
     /**
+     * Crea el caso de uso con el repositorio por el que se leen las cuentas.
+     *
      * @param cuentas el puerto por el que se leen las cuentas
      * @throws NullPointerException si falta el repositorio
      */
-
     public ConsultarCuentas(RepositorioCuentas cuentas) {
         this.cuentas = Objects.requireNonNull(cuentas, "El repositorio de cuentas es obligatorio");
     }

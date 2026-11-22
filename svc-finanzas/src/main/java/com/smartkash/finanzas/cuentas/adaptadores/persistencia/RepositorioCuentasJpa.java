@@ -23,6 +23,11 @@ class RepositorioCuentasJpa implements RepositorioCuentas {
 
     private final CuentasSpringData cuentas;
 
+    /**
+     * Crea el adaptador con las consultas sobre la tabla.
+     *
+     * @param cuentas las consultas sobre la tabla; la entrega Spring
+     */
     RepositorioCuentasJpa(CuentasSpringData cuentas) {
         this.cuentas = cuentas;
     }
