@@ -1,0 +1,2 @@
+# Solo en pruebas: entrega la configuración que en la realidad llega por variables de entorno.
+org.springframework.context.ApplicationContextInitializer=com.smartkash.finanzas.EntornoDePruebas

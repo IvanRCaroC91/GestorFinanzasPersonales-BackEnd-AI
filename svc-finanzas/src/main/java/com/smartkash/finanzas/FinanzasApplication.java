@@ -1,7 +1,9 @@
 package com.smartkash.finanzas;
 
+import com.smartkash.nucleo.web.errores.ManejadorErroresComun;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Import;
 
 /**
  * Servicio de finanzas de SmartKash.
@@ -13,9 +15,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * <p>{@code @SpringBootApplication} reúne tres cosas: marca esta clase como configuración,
  * activa la configuración automática según las dependencias presentes y escanea este paquete y
  * los de abajo en busca de piezas que Spring deba construir.
+ *
+ * <p>{@code @Import} añade el manejador de errores común de {@code nucleo-web}, que vive fuera
+ * de este paquete y por eso Spring no lo encontraría solo. Convierte en respuestas estándar los
+ * datos mal formados y los fallos inesperados.
  */
 
 @SpringBootApplication
+@Import(ManejadorErroresComun.class)
 public class FinanzasApplication {
 
     public static void main(String[] args) {

@@ -22,6 +22,11 @@ services:
       IDENTIDAD_BD_CONTRASENA: ${IDENTIDAD_BD_CONTRASENA:?Falta IDENTIDAD_BD_CONTRASENA en .env}
       IDENTIDAD_BD_MIGRADOR_USUARIO: ${IDENTIDAD_BD_MIGRADOR_USUARIO:?Falta IDENTIDAD_BD_MIGRADOR_USUARIO en .env}
       IDENTIDAD_BD_MIGRADOR_CONTRASENA: ${IDENTIDAD_BD_MIGRADOR_CONTRASENA:?Falta IDENTIDAD_BD_MIGRADOR_CONTRASENA en .env}
+      # Usuarios del servicio de finanzas. El script inicial los crea con estas contraseñas.
+      FINANZAS_BD_USUARIO: ${FINANZAS_BD_USUARIO:?Falta FINANZAS_BD_USUARIO en .env}
+      FINANZAS_BD_CONTRASENA: ${FINANZAS_BD_CONTRASENA:?Falta FINANZAS_BD_CONTRASENA en .env}
+      FINANZAS_BD_MIGRADOR_USUARIO: ${FINANZAS_BD_MIGRADOR_USUARIO:?Falta FINANZAS_BD_MIGRADOR_USUARIO en .env}
+      FINANZAS_BD_MIGRADOR_CONTRASENA: ${FINANZAS_BD_MIGRADOR_CONTRASENA:?Falta FINANZAS_BD_MIGRADOR_CONTRASENA en .env}
     ports:
       # Solo accesible desde este equipo (127.0.0.1), nunca desde la red. El puerto externo
       # no es el 5432 habitual para no chocar con otro PostgreSQL que ya tengas instalado.
