@@ -95,6 +95,21 @@
             <version>1.4.1</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Utilidades para probar rutas protegidas con tokens simulados. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Seguridad: convierte el servicio en servidor de recursos. Lee el token de la cabecera
+     Authorization, comprueba su firma y entrega sus datos al controlador. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>

@@ -3,8 +3,10 @@ package com.smartkash.finanzas;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+import org.springframework.web.bind.annotation.RestController;
 
 import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /**
@@ -28,6 +30,9 @@ class ArquitecturaTest {
 
     private static final String PAQUETE_PERSISTENCIA_CUENTAS =
             "com.smartkash.finanzas.cuentas.adaptadores.persistencia";
+
+    private static final String PAQUETE_SEGURIDAD = "com.smartkash.finanzas.seguridad..";
+    private static final String PAQUETE_CUENTAS = "com.smartkash.finanzas.cuentas..";
 
     /**
      * El dominio (las reglas de negocio) debe ser Java puro: nada de Spring, de JPA ni de la
@@ -67,4 +72,57 @@ class ArquitecturaTest {
                             // name() compara el nombre completo de la clase, con su paquete.
                             name(PAQUETE_PERSISTENCIA_CUENTAS + ".CuentaEntidad")
                                     .or(name(PAQUETE_PERSISTENCIA_CUENTAS + ".CuentasSpringData")));
+
+    /**
+     * Las reglas de negocio no conocen a quien las usa: el dominio y los casos de uso no
+     * dependen de los adaptadores (web, persistencia) ni de la configuración de seguridad.
+     *
+     * <p>Por qué: las dependencias van de fuera hacia dentro. Así se puede cambiar la forma de
+     * exponer o guardar los datos sin tocar el negocio.</p>
+     */
+    @ArchTest
+    static final ArchRule el_negocio_no_conoce_los_adaptadores =
+            noClasses().that().resideInAnyPackage("..dominio..", "..aplicacion..")
+                    .should().dependOnClassesThat().resideInAnyPackage("..adaptadores..", PAQUETE_SEGURIDAD);
+
+    /**
+     * La capa web no lee la base de datos por su cuenta: pide los datos al caso de uso. Así las
+     * reglas (por ejemplo, que cada persona solo vea lo suyo) no se pueden saltar desde un
+     * controlador.
+     */
+    @ArchTest
+    static final ArchRule la_web_no_usa_la_persistencia =
+            noClasses().that().resideInAPackage("..adaptadores.web..")
+                    .should().dependOnClassesThat().resideInAPackage("..adaptadores.persistencia..");
+
+    /**
+     * Las rutas HTTP solo se publican desde los adaptadores web. Una ruta en otro sitio quedaría
+     * fuera de la vista de quien revisa qué expone el servicio.
+     *
+     * <p>Solo cuenta las clases de primer nivel: una ruta anidada dentro de una clase de
+     * prueba, que solo existe en el arranque de esa prueba, no forma parte del servicio.</p>
+     */
+    @ArchTest
+    static final ArchRule las_rutas_solo_se_publican_en_los_adaptadores_web =
+            classes().that().areAnnotatedWith(RestController.class).and().areTopLevelClasses()
+                    .should().resideInAPackage("..adaptadores.web..");
+
+    /**
+     * La seguridad es común a todo el servicio y no depende de ninguna funcionalidad. Así sirve
+     * igual para las cuentas que para las que vengan después.
+     */
+    @ArchTest
+    static final ArchRule la_seguridad_no_depende_de_las_funcionalidades =
+            noClasses().that().resideInAPackage(PAQUETE_SEGURIDAD)
+                    .should().dependOnClassesThat().resideInAPackage(PAQUETE_CUENTAS);
+
+    /**
+     * Las funcionalidades tampoco dependen de las clases de seguridad del servicio: reciben el
+     * token ya validado a través de Spring Security. Así se puede cambiar cómo se valida sin
+     * tocar los controladores.
+     */
+    @ArchTest
+    static final ArchRule las_funcionalidades_no_dependen_de_la_seguridad =
+            noClasses().that().resideInAPackage(PAQUETE_CUENTAS)
+                    .should().dependOnClassesThat().resideInAPackage(PAQUETE_SEGURIDAD);
 }

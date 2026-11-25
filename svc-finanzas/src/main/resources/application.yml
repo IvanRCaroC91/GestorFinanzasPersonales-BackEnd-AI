@@ -43,3 +43,11 @@ eureka:
   client:
     service-url:
       defaultZone: http://${EUREKA_USUARIO}:${EUREKA_CONTRASENA}@${EUREKA_HOST:localhost}:8761/eureka/
+
+# Seguridad: de dónde se descargan las claves públicas para validar los tokens y quién debe figurar como emisor.
+# Ambos valores llegan por variables de entorno; el emisor debe ser idéntico al que configura el servicio de identidad.
+
+finanzas:
+  seguridad:
+    jwks-uri: ${FINANZAS_JWKS_URI:}
+    emisor: ${FINANZAS_TOKEN_EMISOR:}
